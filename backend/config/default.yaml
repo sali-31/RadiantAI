@@ -1,0 +1,103 @@
+# Data
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  batch_size: 32
+  num_workers: 4
+  image_size: [640, 640]  # Larger for acne detection
+
+  # Datasets
+  datasets:
+    - acne_primary
+    - acne_spots
+    - skin_disease  # filtered for acne
+
+  # Augmentation (important for acne with varying lighting/angles)
+  augmentation:
+    horizontal_flip: true
+    vertical_flip: false
+    rotation: 15
+    brightness: 0.3  # Higher for skin tone variation
+    contrast: 0.3
+    hue_saturation: 0.1
+    clahe: true  # Contrast enhancement
+
+# Model
+model:
+  # Note: Currently using ensemble of Roboflow models
+  # If training custom model:
+  architecture: yolov8n  # yolov8n, yolov8s, yolov8m
+  pretrained: true
+  num_classes: 4  # comedone, papule, pustule, nodule
+  dropout: 0.5
+
+  # Ensemble configuration (for Roboflow models)
+  ensemble:
+    primary_model: acnedet-v1
+    classifier: skin_disease_ak
+    fallback: skn-1
+    confidence_threshold: 0.4
+    classification_threshold: 0.85
+
+# Training
+training:
+  epochs: 50
+  learning_rate: 0.001
+  optimizer: adam  # adam, sgd, adamw
+  scheduler: cosine  # cosine, step, plateau
+  early_stopping_patience: 10
+
+  # Loss
+  loss: cross_entropy  # cross_entropy, focal_loss
+  class_weights: auto  # auto, balanced, or null
+
+# Logging
+logging:
+  use_wandb: false
+  wandb_project: lesionrec-acne
+  wandb_entity: null  # your W&B username/team
+  log_interval: 10
+  checkpoint_dir: models/checkpoints
+  save_best_only: true
+
+# Evaluation
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - mAP50  # Mean Average Precision at IoU 0.5
+    - mAP50-95  # mAP across IoU thresholds
+
+  confusion_matrix: true
+
+  # Fairness testing (FitzPatrick17k)
+  fairness:
+    test_on_skin_tones: true
+    max_variance_threshold: 0.10  # 10% max variance across skin tones
+    skin_tone_labels: [I, II, III, IV, V, VI]
+
+# Inference
+inference:
+  confidence_threshold: 0.4  # Lower for acne detection
+  tta: false  # Test-time augmentation
+  enable_preprocessing: true  # Image quality enhancement
+  severity_assessment: true  # Categorize as mild/moderate/severe
+
+# Acne Severity Thresholds
+severity:
+  mild_max: 20  # lesions
+  moderate_max: 50  # lesions
+  # > 50 = severe
+
+# Product Recommendation
+recommendation:
+  enabled: true
+  based_on:
+    - severity
+    - acne_types
+    - skin_sensitivity
