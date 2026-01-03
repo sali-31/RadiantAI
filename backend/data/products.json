@@ -1,0 +1,275 @@
+{
+  "comedones": {
+    "description": "Blackheads and whiteheads - clogged pores without inflammation",
+    "cleansers": [
+      {
+        "name": "CeraVe Salicylic Acid Cleanser",
+        "key_ingredient": "Salicylic Acid 2%",
+        "price_range": "$12-15",
+        "why_it_works": "BHA penetrates pores to dissolve oil and dead skin cells",
+        "how_to_use": "Use twice daily, morning and night",
+        "where_to_buy": "Drugstore, Amazon, Target"
+      },
+      {
+        "name": "La Roche-Posay Effaclar Medicated Gel Cleanser",
+        "key_ingredient": "Salicylic Acid 2%",
+        "price_range": "$15-18",
+        "why_it_works": "Gentle exfoliation for sensitive skin, removes excess oil",
+        "how_to_use": "Use morning and evening on damp skin",
+        "where_to_buy": "CVS, Walgreens, Dermstore"
+      }
+    ],
+    "treatments": [
+      {
+        "name": "Paula's Choice 2% BHA Liquid Exfoliant",
+        "key_ingredient": "Salicylic Acid 2%",
+        "price_range": "$32",
+        "why_it_works": "Liquid formula penetrates deeper, unclogs pores effectively",
+        "how_to_use": "Apply after cleansing, before moisturizer (PM only initially)",
+        "where_to_buy": "Paula's Choice website, Nordstrom, Sephora"
+      },
+      {
+        "name": "The Ordinary Niacinamide 10% + Zinc 1%",
+        "key_ingredient": "Niacinamide 10%",
+        "price_range": "$6",
+        "why_it_works": "Regulates oil production, minimizes pores",
+        "how_to_use": "Apply few drops before moisturizer AM/PM",
+        "where_to_buy": "Sephora, Ulta, The Ordinary website"
+      }
+    ],
+    "moisturizers": [
+      {
+        "name": "Neutrogena Hydro Boost Water Gel",
+        "key_ingredient": "Hyaluronic Acid",
+        "price_range": "$18-22",
+        "why_it_works": "Lightweight, oil-free hydration won't clog pores",
+        "how_to_use": "Apply morning and night as final step",
+        "where_to_buy": "Drugstores, Amazon, Walmart"
+      }
+    ],
+    "routine": "Cleanse → BHA Treatment (PM) → Niacinamide → Moisturize → SPF (AM)",
+    "timeline": "4-6 weeks for visible improvement",
+    "pro_tip": "Introduce BHA gradually (2-3x per week) to avoid irritation"
+  },
+  "papules": {
+    "description": "Inflamed red bumps without pus - inflammatory acne",
+    "cleansers": [
+      {
+        "name": "CeraVe Acne Foaming Cream Cleanser",
+        "key_ingredient": "Benzoyl Peroxide 4%",
+        "price_range": "$15-18",
+        "why_it_works": "Kills acne bacteria, reduces inflammation",
+        "how_to_use": "Use once daily (evening), increase to 2x if tolerated",
+        "where_to_buy": "Target, CVS, Amazon"
+      },
+      {
+        "name": "Neutrogena Oil-Free Acne Wash",
+        "key_ingredient": "Salicylic Acid 2%",
+        "price_range": "$8-10",
+        "why_it_works": "Gentle anti-inflammatory action, affordable",
+        "how_to_use": "Morning and evening",
+        "where_to_buy": "Any drugstore"
+      }
+    ],
+    "treatments": [
+      {
+        "name": "Differin Gel (Adapalene 0.1%)",
+        "key_ingredient": "Adapalene (Retinoid)",
+        "price_range": "$15-25",
+        "why_it_works": "Prevents clogged pores, reduces inflammation, FDA-approved for acne",
+        "how_to_use": "Pea-sized amount on entire face at night (start 2-3x/week)",
+        "where_to_buy": "Drugstores, Amazon - OTC"
+      },
+      {
+        "name": "Benzoyl Peroxide Spot Treatment 5-10%",
+        "key_ingredient": "Benzoyl Peroxide",
+        "price_range": "$8-12",
+        "why_it_works": "Kills P. acnes bacteria causing inflammation",
+        "how_to_use": "Spot treat individual papules 1-2x daily",
+        "where_to_buy": "Any drugstore"
+      },
+      {
+        "name": "The Ordinary Azelaic Acid 10%",
+        "key_ingredient": "Azelaic Acid",
+        "price_range": "$10",
+        "why_it_works": "Anti-inflammatory, reduces redness, gentle",
+        "how_to_use": "Apply AM/PM after water-based serums",
+        "where_to_buy": "Sephora, Ulta"
+      }
+    ],
+    "moisturizers": [
+      {
+        "name": "La Roche-Posay Toleriane Double Repair Face Moisturizer",
+        "key_ingredient": "Ceramides + Niacinamide",
+        "price_range": "$20-25",
+        "why_it_works": "Repairs skin barrier, reduces inflammation, oil-free",
+        "how_to_use": "AM/PM after treatments",
+        "where_to_buy": "CVS, Amazon, Dermstore"
+      }
+    ],
+    "routine": "Cleanse → Differin (PM) → Niacinamide → Moisturize → SPF 30+ (AM)",
+    "timeline": "6-8 weeks for improvement, 12 weeks for optimal results",
+    "pro_tip": "Always use SPF - retinoids increase sun sensitivity. Start slow to build tolerance.",
+    "when_to_see_doctor": "If no improvement after 12 weeks or if acne worsens"
+  },
+  "pustules": {
+    "description": "Inflamed bumps with white/yellow pus - active bacterial infection",
+    "cleansers": [
+      {
+        "name": "PanOxyl Acne Foaming Wash 10%",
+        "key_ingredient": "Benzoyl Peroxide 10%",
+        "price_range": "$10-12",
+        "why_it_works": "Maximum OTC strength BP kills bacteria causing pustules",
+        "how_to_use": "Once daily (evening), leave on 1-2 minutes before rinsing",
+        "where_to_buy": "Walmart, CVS, Amazon"
+      }
+    ],
+    "treatments": [
+      {
+        "name": "Differin Gel + Benzoyl Peroxide (combo therapy)",
+        "key_ingredient": "Adapalene + BP",
+        "price_range": "$25-35 combined",
+        "why_it_works": "Retinoid prevents clogs + BP kills bacteria (gold standard combo)",
+        "how_to_use": "Differin PM, BP spot treatment AM or alternate nights",
+        "where_to_buy": "Drugstores"
+      },
+      {
+        "name": "Mighty Patch Original",
+        "key_ingredient": "Hydrocolloid",
+        "price_range": "$12-18",
+        "why_it_works": "Draws out pus, protects from picking, speeds healing",
+        "how_to_use": "Apply to clean, dry pustule overnight",
+        "where_to_buy": "Target, Amazon, Ulta"
+      },
+      {
+        "name": "La Roche-Posay Effaclar Duo (+)",
+        "key_ingredient": "Benzoyl Peroxide 5.5% + Niacinamide",
+        "price_range": "$20-25",
+        "why_it_works": "Kills bacteria + reduces inflammation + prevents scarring",
+        "how_to_use": "Apply to affected areas AM/PM",
+        "where_to_buy": "CVS, Dermstore"
+      }
+    ],
+    "moisturizers": [
+      {
+        "name": "Cetaphil Pro Oil Removing Foam Wash + Moisturizer SPF 30",
+        "key_ingredient": "Zinc + Ceramides",
+        "price_range": "$15-18",
+        "why_it_works": "Controls oil, soothes inflammation, protects",
+        "how_to_use": "AM after treatments",
+        "where_to_buy": "Drugstores"
+      }
+    ],
+    "routine": "Cleanse (BP wash) → Differin (PM) → BP spot treatment → Moisturize → Hydrocolloid patch",
+    "timeline": "Individual pustules: 3-7 days. Overall improvement: 8-12 weeks",
+    "pro_tip": "DO NOT pop pustules - use hydrocolloid patches instead. Change pillowcases frequently.",
+    "when_to_see_doctor": "If pustules are large, painful, or not responding to OTC treatments after 8 weeks - may need oral antibiotics"
+  },
+  "nodules": {
+    "description": "Deep, painful, solid bumps under skin - severe inflammatory acne",
+    "cleansers": [
+      {
+        "name": "Vanicream Gentle Facial Cleanser",
+        "key_ingredient": "Free of irritants",
+        "price_range": "$10-12",
+        "why_it_works": "Gentle enough for inflamed skin, won't worsen irritation",
+        "how_to_use": "AM/PM with lukewarm water",
+        "where_to_buy": "Walgreens, Amazon"
+      }
+    ],
+    "treatments": [
+      {
+        "name": "SEE A DERMATOLOGIST (Priority)",
+        "key_ingredient": "Prescription required",
+        "price_range": "Varies with insurance",
+        "why_it_works": "Nodular acne requires prescription treatment (oral antibiotics, Accutane, spironolactone)",
+        "how_to_use": "Professional medical care",
+        "where_to_buy": "Doctor's office/Dermatologist"
+      },
+      {
+        "name": "Differin Gel (while waiting for appointment)",
+        "key_ingredient": "Adapalene 0.1%",
+        "price_range": "$15-25",
+        "why_it_works": "Can help prevent new nodules from forming",
+        "how_to_use": "Pea-sized amount nightly (avoid active nodules)",
+        "where_to_buy": "Drugstores"
+      },
+      {
+        "name": "Ice + Anti-inflammatory (immediate relief)",
+        "key_ingredient": "Cold compress",
+        "price_range": "Free",
+        "why_it_works": "Reduces swelling and pain",
+        "how_to_use": "Apply ice wrapped in cloth for 5-10 min, 3x daily",
+        "where_to_buy": "Your freezer"
+      }
+    ],
+    "moisturizers": [
+      {
+        "name": "CeraVe Moisturizing Cream",
+        "key_ingredient": "Ceramides + Hyaluronic Acid",
+        "price_range": "$16-20",
+        "why_it_works": "Intensive hydration for barrier repair",
+        "how_to_use": "AM/PM",
+        "where_to_buy": "Any drugstore"
+      }
+    ],
+    "routine": "GENTLE cleanse → Prescription treatment → Rich moisturizer → SPF 50+",
+    "timeline": "Individual nodules: 2-4 weeks to resolve. Overall: Requires medical treatment.",
+    "pro_tip": "NEVER squeeze or pick nodules - causes scarring. Apply ice for pain/swelling.",
+    "when_to_see_doctor": "IMMEDIATELY - nodular acne requires professional treatment. Can cause permanent scarring.",
+    "prescription_options": [
+      "Oral antibiotics (Doxycycline, Minocycline)",
+      "Isotretinoin (Accutane) - most effective",
+      "Hormonal therapy (Spironolactone for females)",
+      "Cortisone injections for individual nodules"
+    ]
+  },
+  "mixed": {
+    "description": "Combination of multiple acne types (common scenario)",
+    "approach": "Treat based on PREDOMINANT type",
+    "routine": "Gentle Cleanse → Retinoid (PM) → Spot treatments → Moisturize → SPF",
+    "products": "Use papule/pustule routine + spot treat individual lesions based on type"
+  },
+  "general_tips": {
+    "do": [
+      "Wash face 2x daily (morning and night)",
+      "Use non-comedogenic (oil-free) products",
+      "Apply SPF 30+ every morning (especially with retinoids)",
+      "Change pillowcases 2x per week",
+      "Remove makeup before bed",
+      "Introduce new products one at a time (wait 2 weeks between)",
+      "Be patient - most treatments need 8-12 weeks"
+    ],
+    "dont": [
+      "Pop, pick, or squeeze acne (causes scarring)",
+      "Use too many actives at once (irritation makes acne worse)",
+      "Skip moisturizer (dehydration triggers more oil)",
+      "Over-wash face (strips natural oils, worsens acne)",
+      "Share makeup or face towels",
+      "Touch your face throughout the day"
+    ],
+    "diet_considerations": [
+      "Limit dairy (linked to acne in some people)",
+      "Reduce high-glycemic foods (white bread, sugary foods)",
+      "Stay hydrated (8+ glasses water daily)",
+      "Consider omega-3 supplements (anti-inflammatory)"
+    ]
+  },
+  "severity_guidelines": {
+    "mild": {
+      "definition": "Few (< 10) comedones or papules",
+      "treatment": "OTC products (Salicylic Acid, Benzoyl Peroxide)",
+      "see_doctor": "If no improvement in 12 weeks"
+    },
+    "moderate": {
+      "definition": "10-30 papules/pustules, some comedones",
+      "treatment": "OTC retinoid (Differin) + Benzoyl Peroxide, consider dermatologist",
+      "see_doctor": "If OTC doesn't work after 12 weeks or worsening"
+    },
+    "severe": {
+      "definition": "Numerous papules/pustules (>30), nodules, or cysts",
+      "treatment": "REQUIRES DERMATOLOGIST - prescription medication needed",
+      "see_doctor": "ASAP - risk of permanent scarring"
+    }
+  }
+}
