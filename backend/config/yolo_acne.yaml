@@ -1,0 +1,88 @@
+# YOLOv8 Dataset Configuration for Acne Detection
+# This file defines the dataset structure for training YOLOv8 on acne images
+
+# Dataset paths (relative to this config file)
+path: ../data/yolo_dataset  # Root dataset directory
+train: images/train  # Train images (relative to 'path')
+val: images/val      # Validation images
+test: images/test    # Test images (optional)
+
+# Class names (order matters - index corresponds to class ID)
+names:
+  0: comedone    # Blackheads, whiteheads
+  1: papule      # Red, inflamed bumps
+  2: pustule     # Pus-filled lesions
+  3: nodule      # Large, deep lesions
+
+# Number of classes
+nc: 4
+
+# Dataset info
+download: false  # We already have the data
+
+# Class descriptions (for reference)
+class_info:
+  comedone:
+    description: "Non-inflammatory acne (blackheads, whiteheads)"
+    severity: "mild"
+    color: "black or white"
+
+  papule:
+    description: "Inflammatory acne (red bumps without pus)"
+    severity: "moderate"
+    color: "red"
+
+  pustule:
+    description: "Inflammatory acne (pimples with pus)"
+    severity: "moderate"
+    color: "red with white/yellow center"
+
+  nodule:
+    description: "Severe inflammatory acne (large, painful lumps)"
+    severity: "severe"
+    color: "red or skin-colored"
+
+# Training hyperparameters (used by YOLOv8)
+# These can be overridden in the training script
+hyperparameters:
+  epochs: 100
+  imgsz: 640
+  batch: 16
+  patience: 20  # Early stopping patience
+  save_period: 10  # Save checkpoint every N epochs
+  workers: 4
+  lr0: 0.01
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+
+# Data augmentation settings
+augmentation:
+  hsv_h: 0.015  # Hue augmentation
+  hsv_s: 0.7    # Saturation augmentation
+  hsv_v: 0.4    # Value (brightness) augmentation
+  degrees: 15.0  # Rotation (+/- degrees)
+  translate: 0.1 # Translation (+/- fraction)
+  scale: 0.5    # Scaling (+/- gain)
+  shear: 0.0    # Shear (+/- degrees)
+  perspective: 0.0  # Perspective
+  flipud: 0.0   # Vertical flip probability
+  fliplr: 0.5   # Horizontal flip probability
+  mosaic: 1.0   # Mosaic augmentation probability
+  mixup: 0.0    # MixUp augmentation probability
+  copy_paste: 0.0  # Copy-paste augmentation probability
+
+# Model selection (uncomment the one you want to use)
+# yolov8n.pt - Nano (fastest, lowest accuracy)    - 3.2M params
+# yolov8s.pt - Small                               - 11.2M params
+# yolov8m.pt - Medium                              - 25.9M params
+# yolov8l.pt - Large                               - 43.7M params
+# yolov8x.pt - Extra-large (slowest, best accuracy) - 68.2M params
+
+recommended_model: yolov8n.pt  # Start with nano for fast iterations
