@@ -1,0 +1,70 @@
+# This file defines the CI/CD pipeline for automated deployments
+
+steps:
+  # Step 1: Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/lesionrec-backend:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/lesionrec-backend:latest'
+      - '-f'
+      - 'backend/Dockerfile'
+      - './backend'
+
+  # Step 2: Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/lesionrec-backend:$COMMIT_SHA'
+
+  # Step 3: Push latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/lesionrec-backend:latest'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'lesionrec-api'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/lesionrec-backend:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--service-account'
+      - 'lesionrec-backend@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--memory'
+      - '2Gi'
+      - '--cpu'
+      - '2'
+      - '--timeout'
+      - '300'
+      - '--max-instances'
+      - '10'
+      - '--min-instances'
+      - '0'
+      - '--set-env-vars'
+      - 'GCP_PROJECT_ID=$PROJECT_ID,GCS_BUCKET_NAME=$PROJECT_ID-uploads'
+      - '--set-secrets'
+      - 'GOOGLE_API_KEY=gemini-api-key:latest'
+
+# Store built images in Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/lesionrec-backend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/lesionrec-backend:latest'
+
+# Build options
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+# Timeout for entire build (15 minutes)
+timeout: '900s'
