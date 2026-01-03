@@ -1,0 +1,199 @@
+# YOLOv10 Dataset Configuration for Acne Detection
+# This file defines the dataset structure for training YOLOv10 on acne images
+
+# Dataset paths (relative to this config file)
+path: ../data/yolo_dataset  # Root dataset directory
+train: images/train  # Train images (relative to 'path')
+val: images/val      # Validation images
+test: images/test    # Test images (optional)
+
+# Class names (order matters - index corresponds to class ID)
+names:
+  0: comedone    # Blackheads, whiteheads (non-inflammatory)
+  1: papule      # Red, inflamed bumps (inflammatory)
+  2: pustule     # Pus-filled lesions (inflammatory)
+  3: nodule      # Large, deep lesions (severe inflammatory)
+
+# Number of classes
+nc: 4
+
+# Dataset info
+download: false  # We already have the data
+
+# YOLOv10-specific optimizations
+# YOLOv10 has improved architecture for small object detection
+# which is perfect for acne lesions
+
+# Class descriptions (for reference)
+class_info:
+  comedone:
+    description: "Non-inflammatory acne (blackheads, whiteheads)"
+    severity: "mild"
+    color: "black or white"
+    treatment: "Topical retinoids, salicylic acid"
+
+  papule:
+    description: "Inflammatory acne (red bumps without pus)"
+    severity: "moderate"
+    color: "red"
+    treatment: "Benzoyl peroxide, topical antibiotics"
+
+  pustule:
+    description: "Inflammatory acne (pimples with pus)"
+    severity: "moderate"
+    color: "red with white/yellow center"
+    treatment: "Benzoyl peroxide, antibiotics"
+
+  nodule:
+    description: "Severe inflammatory acne (large, painful lumps)"
+    severity: "severe"
+    color: "red or skin-colored"
+    treatment: "Prescription medications, possibly isotretinoin"
+
+# YOLOv10 Training Hyperparameters
+# These are optimized for acne detection
+hyperparameters:
+  # Training duration
+  epochs: 150  # YOLOv10 converges faster, but we use more epochs for medical accuracy
+
+  # Image settings
+  imgsz: 640  # Input image size (640x640)
+
+  # Batch settings
+  batch: 16  # Batch size (reduce if out of memory)
+
+  # Early stopping
+  patience: 25  # Stop if no improvement for 25 epochs
+
+  # Checkpointing
+  save_period: 10  # Save checkpoint every 10 epochs
+
+  # Workers
+  workers: 8  # Number of dataloader workers
+
+  # Learning rates
+  lr0: 0.01  # Initial learning rate
+  lrf: 0.001  # Final learning rate (lr0 * lrf)
+
+  # Optimizer
+  momentum: 0.937  # SGD momentum
+  weight_decay: 0.0005  # L2 regularization
+
+  # Warmup
+  warmup_epochs: 3.0  # Warmup period
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+
+  # Loss weights (YOLOv10-specific)
+  box: 7.5  # Box loss gain
+  cls: 0.5  # Classification loss gain
+  dfl: 1.5  # Distribution focal loss gain
+
+# Data augmentation settings
+# Optimized for medical imaging (skin lesions)
+augmentation:
+  # Color augmentation (important for different skin tones)
+  hsv_h: 0.015  # Hue augmentation (±1.5%)
+  hsv_s: 0.7    # Saturation augmentation (±70%)
+  hsv_v: 0.4    # Value/brightness augmentation (±40%)
+
+  # Geometric augmentation
+  degrees: 5.0       # Rotation (±5 degrees, minimal for medical images)
+  translate: 0.1     # Translation (±10%)
+  scale: 0.5         # Scale (±50%)
+  shear: 0.0         # Shear (disabled for medical images)
+  perspective: 0.0   # Perspective (disabled for medical images)
+
+  # Flip augmentation
+  flipud: 0.0   # Vertical flip probability (disabled)
+  fliplr: 0.5   # Horizontal flip probability (50%)
+
+  # Advanced augmentation
+  mosaic: 1.0       # Mosaic augmentation probability
+  mixup: 0.0        # MixUp (disabled for medical detection)
+  copy_paste: 0.0   # Copy-paste (disabled for medical detection)
+
+# YOLOv10 Model Selection
+# Choose based on your requirements:
+#
+# Model      Params    Speed     mAP    Use Case
+# -------    ------    -----     ---    --------
+# yolov10n   2.3M      fastest   low    Mobile/Edge devices, prototyping
+# yolov10s   7.2M      fast      med    Balanced, general use
+# yolov10m   15.4M     medium    high   Production, good accuracy
+# yolov10b   19.1M     medium    high   YOLOv10-specific balanced variant
+# yolov10l   24.4M     slow      higher Research, clinical applications
+# yolov10x   29.5M     slowest   best   Maximum accuracy, research
+
+recommended_models:
+  prototyping: yolov10n.pt     # Quick experiments
+  production: yolov10m.pt      # Best balance for deployment
+  research: yolov10l.pt        # High accuracy for clinical validation
+  mobile: yolov10n.pt          # Mobile/edge deployment
+
+# YOLOv10 Advantages for Acne Detection:
+# 1. NMS-Free: No Non-Maximum Suppression needed → faster, cleaner predictions
+# 2. Better small object detection → perfect for small acne lesions
+# 3. Dual assignments → better handling of clustered lesions
+# 4. 20-30% faster inference than YOLOv8
+# 5. Improved accuracy on dense scenes → great for multiple acne lesions
+
+# Inference settings
+inference:
+  conf_threshold: 0.4     # Confidence threshold (lower for medical to reduce false negatives)
+  iou_threshold: 0.45     # IoU threshold for NMS (if using YOLOv8 fallback)
+  max_det: 300            # Maximum detections per image
+  agnostic_nms: false     # Class-agnostic NMS
+
+  # Post-processing
+  save_txt: true          # Save results to text files
+  save_conf: true         # Save confidences in text files
+  save_crop: false        # Save cropped detections
+
+  # Visualization
+  line_width: 2           # Bounding box line width
+  hide_labels: false      # Hide labels
+  hide_conf: false        # Hide confidences
+
+# Evaluation metrics
+metrics:
+  - mAP50              # Mean Average Precision at IoU=0.5
+  - mAP50-95           # mAP across IoU 0.5 to 0.95
+  - precision          # Precision (TP / (TP + FP))
+  - recall             # Recall (TP / (TP + FN))
+  - F1-score           # Harmonic mean of precision and recall
+
+# Performance targets (for clinical use)
+performance_targets:
+  mAP50: 0.80           # Target: 80% mAP@50
+  precision: 0.85       # Target: 85% precision (minimize false positives)
+  recall: 0.75          # Target: 75% recall (minimize false negatives)
+
+  # Note: For medical applications, we prioritize recall (catch all acne)
+  # over precision (some false positives are acceptable)
+
+# Fairness testing (important for diverse skin tones)
+fairness:
+  test_on_skin_tones: true
+  skin_tone_categories:
+    - "Type I (Very Fair)"
+    - "Type II (Fair)"
+    - "Type III (Medium)"
+    - "Type IV (Olive)"
+    - "Type V (Brown)"
+    - "Type VI (Dark Brown/Black)"
+
+  max_performance_variance: 0.10  # Maximum 10% variance across skin tones
+
+  # Dataset should include diverse skin tones for fair model
+  recommended_distribution:
+    Type_I_II: 0.20    # 20% light skin
+    Type_III_IV: 0.40  # 40% medium skin
+    Type_V_VI: 0.40    # 40% dark skin
+
+# Notes for developers:
+# - YOLOv10 is optimized for real-time detection
+# - NMS-free architecture means cleaner, faster predictions
+# - Better for clustered objects (multiple acne lesions close together)
+# - Requires less post-processing than YOLOv8
+# - Compatible with Ultralytics API (easy migration from YOLOv8)
