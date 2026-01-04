@@ -72,25 +72,6 @@ RadiantAI addresses these challenges by:
 
 ---
 
-## Repository Structure
-
-RadiantAI/
-├── frontend/            # React + Vite frontend
-├── backend/
-│   ├── src/             # Core backend and AI services
-│   ├── data/            # Datasets and preprocessing assets
-│   ├── runs/            # Model training outputs
-│   ├── notebooks/       # ML experimentation
-│   └── config/          # YOLO model configurations
-├── archive/             # Archived experiments
-├── docs/                # Documentation assets
-├── .dvc/                # Data Version Control
-├── start-dev.sh         # Dev launcher (macOS/Linux)
-├── start-dev.bat        # Dev launcher (Windows)
-└── README.md
-
----
-
 ## Data Science Focus
 
 This project emphasizes several core Data Science competencies:
@@ -126,6 +107,7 @@ npm install
 npm run dev
 
 ## One-command Development (Optional)
+
 ./start-dev.sh   # macOS/Linux
 start-dev.bat    # Windows
 
@@ -146,8 +128,3 @@ start-dev.bat    # Windows
 
 RadiantAI was developed as an independent, self-directed project to apply advanced concepts in data science, machine learning, and system design.
 
-[![React](https://img.shields.io/badge/Frontend-React%20%7C%20Vite-61DAFB.svg)](https://reactjs.org/)
-[![Python](https://img.shields.io/badge/Backend-Python-3776AB.svg)](https://www.python.org/)
-[![Computer%20Vision](https://img.shields.io/badge/Computer%20Vision-YOLO%20%7C%20YOLOv10-orange.svg)]
-[![Google%20AI](https://img.shields.io/badge/AI-Google%20AI-DB4437.svg)]
-[![Focus](https://img.shields.io/badge/Design-Privacy--First%20AI-success.svg)]
