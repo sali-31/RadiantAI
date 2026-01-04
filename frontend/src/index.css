@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --color-rose: hsl(var(--rose));
+  --color-rose-light: hsl(var(--rose-light));
+  --color-rose-dark: hsl(var(--rose-dark));
+  --color-plum: hsl(var(--plum));
+  --color-plum-light: hsl(var(--plum-light));
+  --color-champagne: hsl(var(--champagne));
+  
+  --color-sidebar-background: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+}
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 340 5% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 340 5% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 340 5% 15%;
+
+    --primary: 350 60% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 280 40% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 340 15% 96%;
+    --muted-foreground: 340 10% 45%;
+
+    --accent: 40 85% 75%;
+    --accent-foreground: 340 5% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 340 20% 90%;
+    --input: 340 20% 90%;
+    --ring: 350 60% 65%;
+
+    --radius: 0.75rem;
+    
+    /* Cosmetics brand colors */
+    --rose: 350 60% 65%;
+    --rose-light: 350 70% 80%;
+    --rose-dark: 350 50% 45%;
+    --plum: 280 40% 45%;
+    --plum-light: 280 35% 65%;
+    --champagne: 40 85% 75%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(350, 60%, 65%), hsl(340, 55%, 70%));
+    --gradient-secondary: linear-gradient(135deg, hsl(280, 40%, 45%), hsl(290, 35%, 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(350, 60%, 65%), hsl(280, 40%, 45%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(340, 15%, 98%));
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -2px hsl(350 60% 65% / 0.15);
+    --shadow-elegant: 0 10px 40px -10px hsl(350 60% 65% / 0.25);
+    --shadow-glow: 0 0 30px hsl(350 70% 80% / 0.4);
+    
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 340 15% 8%;
+    --foreground: 340 5% 95%;
+
+    --card: 340 15% 10%;
+    --card-foreground: 340 5% 95%;
+
+    --popover: 340 15% 10%;
+    --popover-foreground: 340 5% 95%;
+
+    --primary: 350 60% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 280 40% 45%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 340 15% 15%;
+    --muted-foreground: 340 10% 65%;
+
+    --accent: 40 85% 75%;
+    --accent-foreground: 340 15% 8%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 340 15% 20%;
+    --input: 340 15% 20%;
+    --ring: 350 60% 65%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
