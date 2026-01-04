@@ -98,17 +98,22 @@ RadiantAI is designed using privacy-by-design principles:
 ## How to Run (Development)
 # Backend
 cd backend
+
 pip install -r requirements.txt
+
 python src/main.py
 
 # Frontend
 cd frontend
+
 npm install
+
 npm run dev
 
 ## One-command Development (Optional)
 
 ./start-dev.sh   # macOS/Linux
+
 start-dev.bat    # Windows
 
 ---
