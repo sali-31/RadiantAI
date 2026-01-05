@@ -94,29 +94,6 @@ RadiantAI is designed using privacy-by-design principles:
 - Recommendations are advisory and do not constitute medical diagnoses  
 
 ---
-
-## How to Run (Development)
-# Backend
-cd backend
-
-pip install -r requirements.txt
-
-python src/main.py
-
-# Frontend
-cd frontend
-
-npm install
-
-npm run dev
-
-## One-command Development (Optional)
-
-./start-dev.sh   # macOS/Linux
-
-start-dev.bat    # Windows
-
----
 ## Future Work
 
 -Quantitative evaluation of model accuracy across diverse skin tones and lighting conditions
