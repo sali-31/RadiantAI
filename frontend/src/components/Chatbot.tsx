@@ -54,6 +54,15 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
         try {
             // Call the backend API
             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            
+            // 🔍 DEBUG LOGGING
+            console.group('🤖 Chatbot API Request');
+            console.log('API_URL:', API_URL);
+            console.log('Full URL:', `${API_URL}/api/chat`);
+            console.log('Origin:', window.location.origin);
+            console.log('User Input:', input);
+            console.groupEnd();
+            
             const response = await fetch(`${API_URL}/api/chat`, {
                 method: 'POST',
                 headers: {
@@ -69,11 +78,15 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
                 }),
             });
 
+            console.log('📡 Response Status:', response.status);
+            console.log('📡 Response Headers:', Object.fromEntries(response.headers.entries()));
+
             if (!response.ok) {
-                throw new Error('Failed to get response');
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('✅ Response Data:', data);
             
             const botMessage: Message = {
                 id: (Date.now() + 1).toString(),
