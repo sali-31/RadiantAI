@@ -20,6 +20,7 @@ interface DiagnosisData {
         x_max: number;
         y_max: number;
         confidence: number;
+        severity?: string;
     }>;
 }
 
@@ -81,22 +82,12 @@ export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
                     <button onClick={onBack} className="text-gray-600 hover:text-blue-600 flex items-center font-medium transition-colors">
                         <span className="mr-2 text-xl">←</span> Back to Dashboard
                     </button>
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm text-gray-500 uppercase tracking-wider font-semibold">Severity Level:</span>
-                        <span className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wide ${
-                            (diagnosis.severity?.toLowerCase() || '') === 'mild' ? 'bg-green-100 text-green-800' : 
-                            (diagnosis.severity?.toLowerCase() || '') === 'severe' ? 'bg-red-100 text-red-800' : 
-                            'bg-yellow-100 text-yellow-800'
-                        }`}>
-                            {diagnosis.severity || 'Unknown'}
-                        </span>
-                    </div>
                 </div>
 
                 <div className="flex flex-col xl:flex-row">
                     {/* Left Column: Image (Sticky on Desktop) */}
                     <div className="w-full xl:w-1/2 bg-gray-50 p-6 md:p-10 flex flex-col items-center justify-center border-b xl:border-b-0 xl:border-r border-gray-200">
-                        <div className="relative w-full max-w-2xl aspect-[4/3] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="relative w-full max-w-2xl aspect-4/3 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                             <img 
                                 src={imageUrl} 
                                 alt="Analyzed Skin" 
@@ -105,8 +96,8 @@ export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
                                     e.currentTarget.src = 'https://placehold.co/600x400?text=Image+Protected';
                                 }}
                             />
-                            {/* Overlay Bounding Boxes */}
-                            {diagnosis.blemish_regions?.map((region, idx) => (
+                            {/* Overlay Bounding Boxes - DISABLED FOR NOW */}
+                            {false && diagnosis?.blemish_regions?.map((region, idx) => (
                                 <div
                                     key={idx}
                                     className="absolute border-2 border-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-help"
@@ -116,7 +107,7 @@ export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
                                         width: `${(region.x_max - region.x_min) * 100}%`,
                                         height: `${(region.y_max - region.y_min) * 100}%`,
                                     }}
-                                    title={`${region.type} (${Math.round(region.confidence * 100)}%)`}
+                                    title={`${region.type}${region.severity ? ` - ${region.severity}` : ''} (${Math.round(region.confidence * 100)}% confidence)`}
                                 />
                             ))}
                         </div>
