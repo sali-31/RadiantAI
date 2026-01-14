@@ -155,14 +155,16 @@ async def perform_ensemble_analysis(image_bytes: bytes, mime_type: str) -> Dict[
 
     # Create partial functions to pass arguments to the sync functions
     gemini_func = functools.partial(_run_gemini_sync, image_bytes, mime_type)
-    vision_func = functools.partial(_run_vision_sync, image_bytes)
+    # vision_func = functools.partial(_run_vision_sync, image_bytes)  # DISABLED - Vision API bounding boxes
 
     # Schedule both tasks to run immediately
     task1 = loop.run_in_executor(None, gemini_func)
-    task2 = loop.run_in_executor(None, vision_func)
+    # task2 = loop.run_in_executor(None, vision_func)  # DISABLED - Vision API bounding boxes
 
     # Wait for both to complete
-    gemini_result, vision_result = await asyncio.gather(task1, task2)
+    # gemini_result, vision_result = await asyncio.gather(task1, task2)  # DISABLED - Vision API
+    gemini_result = await task1
+    vision_result = []  # Empty result instead of calling Vision API
 
     return {
         "analysis": gemini_result,
