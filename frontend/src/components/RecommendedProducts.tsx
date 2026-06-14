@@ -241,37 +241,63 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
     );
 };
 
-export const ProductCard = ({ product, compact = false }: { product: Product, compact?: boolean }) => (
-    <div className={`border rounded-lg hover:shadow-md transition-shadow bg-white flex flex-col h-full ${compact ? 'p-3 min-w-[180px]' : 'p-4'}`}>
-        <div className={`${compact ? 'h-32' : 'h-48'} flex items-center justify-center mb-4 bg-gray-50 rounded-md overflow-hidden relative group`}>
-            {product.thumbnail ? (
-                <img src={product.thumbnail} alt={product.title} className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105" />
-            ) : (
-                <div className="text-gray-400 text-xs">No Image</div>
-            )}
-        </div>
-        <div className="grow">
-            <div className="text-xs font-bold text-blue-600 uppercase mb-1">{product.category || 'Product'}</div>
-            <h4 className={`font-medium text-gray-900 line-clamp-2 mb-2 ${compact ? 'text-xs' : 'text-sm'}`} title={product.title || product.name}>
-                {product.title || product.name}
-            </h4>
-            <div className="flex items-center mb-2">
-                <span className="text-yellow-400 mr-1 text-xs">★</span>
-                <span className="text-xs text-gray-600">{product.rating} ({product.reviews})</span>
+export const ProductCard = ({ product, compact = false }: { product: Product, compact?: boolean }) => {
+    const imageSrc = product.thumbnail || product.image_url;
+    const [imageFailed, setImageFailed] = useState(false);
+    const title = product.title || product.name || 'Recommended product';
+    const step = product.routine_step || product.category || 'Product';
+    const retailer = product.retailer || product.source || product.data_source;
+    const href = product.link || product.product_url;
+    const price = typeof product.price_numeric === 'number' ? `$${product.price_numeric.toFixed(2)}` : product.price;
+
+    return (
+        <div className={`border rounded-lg hover:shadow-md transition-shadow bg-white flex flex-col h-full ${compact ? 'p-3 min-w-[180px]' : 'p-4'}`}>
+            <div className={`${compact ? 'h-32' : 'h-48'} flex items-center justify-center mb-4 bg-gray-50 rounded-md overflow-hidden relative group`}>
+                {imageSrc && !imageFailed ? (
+                    <img
+                        src={imageSrc}
+                        alt={title}
+                        referrerPolicy="no-referrer"
+                        onError={() => setImageFailed(true)}
+                        className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
+                    />
+                ) : (
+                    <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 px-3 text-center">
+                        <span className="text-xl font-bold text-blue-700">{product.brand?.[0] || title[0]}</span>
+                        <span className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{product.brand || retailer || step}</span>
+                    </div>
+                )}
+            </div>
+            <div className="grow">
+                <div className="flex items-center gap-2 mb-1">
+                    <div className="text-xs font-bold text-blue-600 uppercase">{step}</div>
+                    {retailer && <div className="text-[10px] font-semibold text-slate-500 uppercase">{retailer}</div>}
+                </div>
+                <h4 className={`font-medium text-gray-900 line-clamp-2 mb-2 ${compact ? 'text-xs' : 'text-sm'}`} title={title}>
+                    {title}
+                </h4>
+                {(product.rating || product.reviews) && (
+                    <div className="flex items-center mb-2">
+                        <span className="text-yellow-400 mr-1 text-xs">★</span>
+                        <span className="text-xs text-gray-600">{product.rating || 'Popular'} {product.reviews ? `(${product.reviews})` : ''}</span>
+                    </div>
+                )}
+            </div>
+            <div className={`flex items-center justify-between border-t border-gray-100 ${compact ? 'mt-2 pt-2' : 'mt-4 pt-4'}`}>
+                <span className={`${compact ? 'text-sm' : 'text-lg'} font-bold text-gray-900`}>
+                    {price || 'See retailer'}
+                </span>
+                {href && (
+                    <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`bg-gray-900 text-white font-medium rounded hover:bg-gray-800 transition-colors ${compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-1.5 text-xs'}`}
+                    >
+                        View
+                    </a>
+                )}
             </div>
         </div>
-        <div className={`flex items-center justify-between border-t border-gray-100 ${compact ? 'mt-2 pt-2' : 'mt-4 pt-4'}`}>
-            <span className={`${compact ? 'text-sm' : 'text-lg'} font-bold text-gray-900`}>
-                {typeof product.price_numeric === 'number' ? `$${product.price_numeric.toFixed(2)}` : product.price}
-            </span>
-            <a 
-                href={product.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className={`bg-gray-900 text-white font-medium rounded hover:bg-gray-800 transition-colors ${compact ? 'px-2 py-1 text-[10px]' : 'px-3 py-1.5 text-xs'}`}
-            >
-                View
-            </a>
-        </div>
-    </div>
-);
+    );
+};

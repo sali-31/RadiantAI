@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: radiantai-backend
+    env: docker
+    rootDir: backend
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: http://localhost:5173
+      - key: BACKEND_PUBLIC_URL
+        sync: false
+      - key: ENABLE_LIVE_PRODUCT_SEARCH
+        value: true
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: S3_UPLOAD_PREFIX
+        value: uploads

@@ -223,8 +223,9 @@ This feature will allow users to turn their recommended product routines into sh
 ### Prerequisites
 - Node.js (v16+)
 - Python (v3.9+)
-- Google Cloud Credentials (for Vision & Gemini)
-- AWS Credentials (for S3)
+- Google AI Studio API key (for Gemini)
+- Optional Google Cloud credentials (for Vision)
+- Optional AWS credentials (for S3, if storage is wired to S3)
 
 ### Installation
 
@@ -237,8 +238,10 @@ This feature will allow users to turn their recommended product routines into sh
 2.  **Environment Setup**:
     Create a `.env` file in the root (or `backend/`) with the following:
     ```env
-    GOOGLE_APPLICATION_CREDENTIALS="path/to/your/google-creds.json"
-    GEMINI_API_KEY="your_gemini_key"
+    GOOGLE_API_KEY="your_google_ai_studio_api_key"
+    # Optional, only if using Google Cloud Vision:
+    GOOGLE_APPLICATION_CREDENTIALS="/absolute/path/to/your/google-creds.json"
+    # Optional, only if wiring uploads to AWS S3:
     AWS_ACCESS_KEY_ID="your_aws_key"
     AWS_SECRET_ACCESS_KEY="your_aws_secret"
     AWS_REGION="us-east-1"
@@ -251,6 +254,12 @@ This feature will allow users to turn their recommended product routines into sh
     ./start-dev.sh
     ```
     *This will start the Backend on `http://localhost:8000` and the Frontend on `http://localhost:5173`.*
+
+### MVP Deployment
+
+For the final hosted MVP setup using FastAPI, Gemini, optional Google Vision, AWS S3, Render, and Vercel, see:
+
+- [`docs/MVP_DEPLOYMENT.md`](docs/MVP_DEPLOYMENT.md)
 
 ---
 
@@ -269,5 +278,3 @@ This feature will allow users to turn their recommended product routines into sh
 ---
 
 RadiantAI was developed as an independent, self-directed project to apply advanced concepts in data science, machine learning, and system design.
-
-

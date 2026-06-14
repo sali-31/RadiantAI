@@ -47,6 +47,10 @@ class SkinHealthChatbot:
             Keep responses concise but informative (2-3 paragraphs max).
             Use bullet points for lists when helpful.
             Maintain a friendly, supportive tone.
+
+            Do not reveal internal reasoning, drafting notes, uncertainty narration, or self-corrections.
+            Never write phrases like "self-correction", "let me re-evaluate", "I should", or "try again".
+            Give the final answer directly.
             
             IMPORTANT: You must return your response in valid JSON format with the following structure:
             {
@@ -54,7 +58,9 @@ class SkinHealthChatbot:
                 "recommended_products": ["Product 1", "Product 2", ..., "Product N"]
             }
 
-            When recommending products, try to be specific with product names so we can look them up in our product catalog.
+            When recommending products, include clear retail product names only in recommended_products.
+            Prefer popular, searchable skincare products from Sephora, StyleKorean, or established Korean skincare brands when relevant.
+            If the user asks for a specific ingredient, recommend products that actually contain or clearly target that ingredient/concern.
             """
         
     def _sanitize_input(self, text: str) -> tuple[bool, str]:
@@ -120,20 +126,34 @@ class SkinHealthChatbot:
             response = self.model.generate_content(full_prompt)
             
             # Extract text from response
-            response = response.text
+            response = response.text.strip()
 
             # Clean up any potential markdown code blocks
-            if response.startswith("```json"):
-                response = response.replace("```json", "").replace("```", "")
+            if response.startswith("```"):
+                response = re.sub(r"^```(?:json)?", "", response.strip(), flags=re.IGNORECASE)
+                response = re.sub(r"```$", "", response.strip())
             
             try:
                 response_data = json.loads(response)
             except json.JSONDecodeError:
-                # Fallback if AI fails to output JSON
-                response_data = {
-                    "response_text": response,
-                    "recommended_products": []
-                }
+                json_match = re.search(r"\{.*\}", response, flags=re.DOTALL)
+                if json_match:
+                    try:
+                        response_data = json.loads(json_match.group(0))
+                    except json.JSONDecodeError:
+                        response_data = {
+                            "response_text": response,
+                            "recommended_products": []
+                        }
+                else:
+                    response_data = {
+                        "response_text": response,
+                        "recommended_products": []
+                    }
+
+            response_data["response_text"] = self._remove_internal_notes(
+                str(response_data.get("response_text", ""))
+            )
             
             logger.info(f"Chat response generated successfully")
             return response_data
@@ -141,6 +161,18 @@ class SkinHealthChatbot:
         except Exception as e:
             logger.error(f"Error generating chat response: {e}")
             raise
+
+    def _remove_internal_notes(self, response_text: str) -> str:
+        """Strip model meta-commentary if the provider leaks it anyway."""
+        blocked_patterns = [
+            r"\*?self-correction[^*\n]*(?:\*|\n)?",
+            r"let me re-evaluate[^.\n]*(?:\.|\n)?",
+            r"let's try again[^.\n]*(?:\.|\n)?",
+        ]
+        cleaned = response_text
+        for pattern in blocked_patterns:
+            cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+        return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
     def _build_messages_from_history(self, conversation_history: List[Dict[str, str]]) -> List[str]:
         """Convert conversation history to message format"""

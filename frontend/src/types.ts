@@ -25,6 +25,9 @@ export interface Product {
     value_score?: number;
     condition?: string;
     data_source?: string;
+    retailer?: string;
+    source?: string;
+    routine_step?: string;
 }
 
 export interface AnalysisResponse {

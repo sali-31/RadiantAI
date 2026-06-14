@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -12,8 +13,10 @@ from pydantic import BaseModel, Field
 
 from .services.analysis import perform_ensemble_analysis
 from .services.chatbot import SkinHealthChatbot
+from .services.live_catalog import products_for_step, search_live_catalog, search_verified_catalog
 from .services.privacy import scrub_image_metadata
 from .services.product_recommender import ProductRecommender
+from .services.storage import is_s3_configured, looks_like_s3_key, presigned_s3_url, upload_image_to_s3
 
 
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +41,219 @@ DEFAULT_ANALYSIS = {
     "treatments": ["salicylic acid", "benzoyl peroxide", "niacinamide"],
     "blemish_regions": [],
 }
+
+ROUTINE_STEPS = {
+    "cleanser": ["cleanser", "cleansing", "face wash", "wash"],
+    "toner": ["toner", "essence", "pad"],
+    "treatment": [
+        "treatment",
+        "serum",
+        "ampoule",
+        "retinol",
+        "adapalene",
+        "benzoyl",
+        "salicylic",
+        "kojic",
+        "tranexamic",
+        "azelaic",
+        "arbutin",
+        "niacinamide",
+        "snail",
+    ],
+    "moisturizer": ["moisturizer", "cream", "lotion", "barrier"],
+}
+
+STEP_CATEGORY_ALIASES = {
+    "cleanser": ["cleanser"],
+    "toner": ["toner", "essence"],
+    "treatment": ["treatment", "serum", "ampoule", "spot_treatment"],
+    "moisturizer": ["moisturizer", "cream", "lotion"],
+}
+
+PRODUCT_INTENT_TERMS = [
+    "recommend",
+    "recommendation",
+    "product",
+    "products",
+    "routine",
+    "regimen",
+    "steps",
+    "search",
+    "buy",
+    "cleanser",
+    "toner",
+    "treatment",
+    "serum",
+    "serums",
+    "moisturizer",
+    "sunscreen",
+    "spf",
+    "kojic",
+    "azelaic",
+    "tranexamic",
+    "txa",
+    "arbutin",
+    "niacinamide",
+    "vitamin c",
+    "retinol",
+    "dark spot",
+    "dark spots",
+    "brightening",
+    "hyperpigmentation",
+    "melasma",
+]
+
+ROUTINE_INTENT_TERMS = ["routine", "regimen", "steps", "morning", "night", "every step"]
+
+QUERY_STOPWORDS = {
+    "good",
+    "best",
+    "give",
+    "need",
+    "want",
+    "with",
+    "from",
+    "for",
+    "the",
+    "and",
+    "products",
+    "product",
+    "recommend",
+    "recommendations",
+}
+
+CURATED_MARKETPLACE_PRODUCTS = [
+    {
+        "title": "COSRX Low pH Good Morning Gel Cleanser",
+        "brand": "COSRX",
+        "category": "cleanser",
+        "price": "See retailer",
+        "rating": 4.7,
+        "reviews": 12000,
+        "retailer": "StyleKorean",
+        "source": "StyleKorean",
+        "link": "https://www.stylekorean.com/search/cosrx%20low%20ph%20good%20morning%20gel%20cleanser",
+        "directions": "Use morning or evening on damp skin, massage gently, then rinse.",
+        "reason": "Popular Korean low-pH cleanser for a gentle first step.",
+    },
+    {
+        "title": "Anua Heartleaf Quercetinol Pore Deep Cleansing Foam",
+        "brand": "Anua",
+        "category": "cleanser",
+        "price": "See retailer",
+        "rating": 4.6,
+        "reviews": 9000,
+        "retailer": "StyleKorean",
+        "source": "StyleKorean",
+        "link": "https://www.stylekorean.com/search/anua%20heartleaf%20quercetinol%20pore%20deep%20cleansing%20foam",
+        "directions": "Use as a gentle foaming cleanser, especially when skin feels oily or congested.",
+        "reason": "Popular K-beauty cleanser from Anua for pores and oily skin.",
+    },
+    {
+        "title": "LANEIGE Cream Skin Toner & Moisturizer",
+        "brand": "LANEIGE",
+        "category": "toner",
+        "price": "See retailer",
+        "rating": 4.6,
+        "reviews": 5000,
+        "retailer": "Sephora",
+        "source": "Sephora",
+        "link": "https://www.sephora.com/search?keyword=laneige%20cream%20skin%20toner%20moisturizer",
+        "directions": "Apply after cleansing with palms or a cotton pad before serum.",
+        "reason": "Popular Korean hydrating toner-moisturizer step at Sephora.",
+    },
+    {
+        "title": "Anua Heartleaf 77 Soothing Toner",
+        "brand": "Anua",
+        "category": "toner",
+        "price": "See retailer",
+        "rating": 4.7,
+        "reviews": 15000,
+        "retailer": "StyleKorean",
+        "source": "StyleKorean",
+        "link": "https://www.stylekorean.com/search/anua%20heartleaf%2077%20soothing%20toner",
+        "directions": "Pat into clean skin before treatment products.",
+        "reason": "Popular Korean soothing toner for redness-prone or sensitive routines.",
+    },
+    {
+        "title": "Beauty of Joseon Glow Serum Propolis + Niacinamide",
+        "brand": "Beauty of Joseon",
+        "category": "treatment",
+        "price": "See retailer",
+        "rating": 4.7,
+        "reviews": 14000,
+        "retailer": "StyleKorean",
+        "source": "StyleKorean",
+        "link": "https://www.stylekorean.com/search/beauty%20of%20joseon%20glow%20serum%20propolis%20niacinamide",
+        "directions": "Use after toner and before moisturizer, starting once daily.",
+        "reason": "Popular K-beauty serum for glow, oil balance, and post-blemish care.",
+    },
+    {
+        "title": "Dr. Jart+ Cicapair Tiger Grass Serum",
+        "brand": "Dr. Jart+",
+        "category": "treatment",
+        "price": "See retailer",
+        "rating": 4.5,
+        "reviews": 3000,
+        "retailer": "Sephora",
+        "source": "Sephora",
+        "link": "https://www.sephora.com/search?keyword=dr%20jart%20cicapair%20tiger%20grass%20serum",
+        "directions": "Apply after toner to help calm visible redness before moisturizer.",
+        "reason": "Popular Korean cica-focused treatment available at Sephora.",
+    },
+    {
+        "title": "Dr. Jart+ Ceramidin Skin Barrier Moisturizing Cream",
+        "brand": "Dr. Jart+",
+        "category": "moisturizer",
+        "price": "See retailer",
+        "rating": 4.6,
+        "reviews": 7000,
+        "retailer": "Sephora",
+        "source": "Sephora",
+        "link": "https://www.sephora.com/search?keyword=dr%20jart%20ceramidin%20cream",
+        "directions": "Use as the final moisturizer step, morning or night.",
+        "reason": "Popular Korean barrier cream for dryness or irritation.",
+    },
+    {
+        "title": "LANEIGE Water Bank Blue Hyaluronic Cream Moisturizer",
+        "brand": "LANEIGE",
+        "category": "moisturizer",
+        "price": "See retailer",
+        "rating": 4.6,
+        "reviews": 6000,
+        "retailer": "Sephora",
+        "source": "Sephora",
+        "link": "https://www.sephora.com/search?keyword=laneige%20water%20bank%20blue%20hyaluronic%20cream",
+        "directions": "Apply after serum to seal hydration.",
+        "reason": "Popular Korean moisturizer for hydration-focused routines.",
+    },
+    {
+        "title": "Beauty of Joseon Relief Sun Rice + Probiotics SPF50+",
+        "brand": "Beauty of Joseon",
+        "category": "sunscreen",
+        "price": "See retailer",
+        "rating": 4.8,
+        "reviews": 20000,
+        "retailer": "StyleKorean",
+        "source": "StyleKorean",
+        "link": "https://www.stylekorean.com/search/beauty%20of%20joseon%20relief%20sun",
+        "directions": "Use every morning as the final skincare step and reapply when outdoors.",
+        "reason": "Very popular K-beauty sunscreen for a comfortable daily SPF step.",
+    },
+    {
+        "title": "innisfree Daily UV Defense Sunscreen SPF 36",
+        "brand": "innisfree",
+        "category": "sunscreen",
+        "price": "See retailer",
+        "rating": 4.5,
+        "reviews": 9000,
+        "retailer": "Sephora",
+        "source": "Sephora",
+        "link": "https://www.sephora.com/search?keyword=innisfree%20daily%20uv%20defense%20sunscreen",
+        "directions": "Apply generously as the last morning step.",
+        "reason": "Popular Korean SPF option available at Sephora.",
+    },
+]
 
 app = FastAPI(
     title="RadiantAI API",
@@ -78,6 +294,11 @@ class ImageUrlRequest(BaseModel):
     s3_key: str
 
 
+class LiveProductSearchRequest(BaseModel):
+    query: str
+    limit: int = Field(default=12, ge=1, le=30)
+
+
 def get_recommender() -> ProductRecommender:
     global _recommender
     if _recommender is None:
@@ -96,7 +317,8 @@ def get_chatbot() -> Optional[SkinHealthChatbot]:
 
 
 def public_upload_url(filename: str) -> str:
-    return f"http://localhost:8000/uploads/{filename}"
+    base_url = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    return f"{base_url}/uploads/{filename}"
 
 
 def normalize_json(value: Any) -> Any:
@@ -135,7 +357,19 @@ def infer_chat_condition(message: str) -> str:
         "eczema": ["eczema", "itchy", "rash", "dermatitis"],
         "dry_skin": ["dry", "flaky", "dehydrated"],
         "oily_skin": ["oily", "oil", "shine", "sebum"],
-        "hyperpigmentation": ["dark spot", "dark spots", "hyperpigmentation", "discoloration"],
+        "hyperpigmentation": [
+            "dark spot",
+            "dark spots",
+            "hyperpigmentation",
+            "discoloration",
+            "melasma",
+            "kojic",
+            "brightening",
+            "tranexamic",
+            "txa",
+            "arbutin",
+            "vitamin c",
+        ],
         "sensitive_skin": ["sensitive", "irritation", "stinging", "burning"],
     }
     for condition, keywords in condition_keywords.items():
@@ -144,9 +378,155 @@ def infer_chat_condition(message: str) -> str:
     return "acne"
 
 
+def wants_product_recommendations(message: str) -> bool:
+    text = message.lower()
+    return any(term in text for term in PRODUCT_INTENT_TERMS)
+
+
+def is_routine_request(message: str) -> bool:
+    text = message.lower()
+    return any(term in text for term in ROUTINE_INTENT_TERMS)
+
+
+def expanded_query_tokens(query: str) -> List[str]:
+    tokens: List[str] = []
+    for token in re.split(r"[^a-z0-9]+", query.lower()):
+        if len(token) <= 2 or token in QUERY_STOPWORDS:
+            continue
+        tokens.append(token)
+        if token.endswith("s") and len(token) > 4:
+            tokens.append(token[:-1])
+    return list(dict.fromkeys(tokens))
+
+
+def requested_product_step(message: str) -> Optional[str]:
+    text = message.lower()
+    if any(term in text for term in ["sunscreen", "spf", "sun serum", "sun cream"]):
+        return "sunscreen"
+    for step, keywords in ROUTINE_STEPS.items():
+        if any(keyword in text for keyword in keywords):
+            return step
+    return None
+
+
+def filter_by_requested_form(message: str, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    text = message.lower()
+    form_terms = ["serum", "serums", "cleanser", "toner", "moisturizer", "cream", "sunscreen", "spf"]
+    requested_forms = [term.rstrip("s") for term in form_terms if term in text]
+    if not requested_forms:
+        return products
+
+    filtered = [
+        product
+        for product in products
+        if any(
+            form in f"{product.get('title', '')} {product.get('name', '')} {product.get('category', '')}".lower()
+            for form in requested_forms
+        )
+    ]
+    return filtered if len(filtered) >= 2 else products
+
+
+def related_conditions(condition: str) -> List[str]:
+    if condition == "hyperpigmentation":
+        return ["hyperpigmentation", "dark_spots", "melasma"]
+    return [condition]
+
+
+def search_local_product_catalog(query: str, condition: str, limit: int = 8) -> List[Dict[str, Any]]:
+    catalog_df = get_recommender().get_combined_products(related_conditions(condition))
+    if catalog_df.empty:
+        return []
+
+    tokens = expanded_query_tokens(query)
+    if not tokens:
+        return []
+
+    df = catalog_df.copy()
+
+    def score_row(row: Any) -> int:
+        title = str(row.get("title", "")).lower()
+        category = str(row.get("category", "")).lower()
+        haystack = f"{title} {category}"
+        score = 0
+        for token in tokens:
+            token_weight = 10 if token in {"kojic", "tranexamic", "txa", "arbutin", "azelaic"} else 4
+            if token in title:
+                score += token_weight
+            elif token in haystack:
+                score += max(2, token_weight // 2)
+        if any(step_word in title for step_word in ["serum", "treatment", "ampoule"]):
+            score += 2
+        return score
+
+    df["_query_score"] = df.apply(score_row, axis=1)
+    df = df[df["_query_score"] > 0]
+    if df.empty:
+        return []
+
+    sort_columns = ["_query_score"]
+    ascending = [False]
+    for column in ["rating", "reviews"]:
+        if column in df.columns:
+            sort_columns.append(column)
+            ascending.append(False)
+
+    return df.sort_values(sort_columns, ascending=ascending).head(limit).drop(columns=["_query_score"]).to_dict("records")
+
+
+def products_for_chat_message(message: str, condition: str, limit: int = 16) -> List[Dict[str, Any]]:
+    step = None if is_routine_request(message) else requested_product_step(message)
+    verified_products = filter_by_requested_form(
+        message,
+        search_verified_catalog(message, step=step, limit=limit),
+    )
+    live_products = filter_by_requested_form(message, try_live_product_search(message, limit=8))
+    local_products = filter_by_requested_form(
+        message,
+        search_local_product_catalog(message, condition, limit=8),
+    )
+    query_products = merge_products(
+        verified_products,
+        live_products,
+        local_products,
+        limit=limit,
+    )
+
+    if is_routine_request(message):
+        return merge_products(
+            build_step_recommendations(condition, query=message),
+            query_products,
+            limit=limit,
+        )
+
+    if len(query_products) >= 2:
+        return query_products
+
+    return merge_products(
+        query_products,
+        build_step_recommendations(condition, query=message),
+        limit=limit,
+    )
+
+
+def align_response_with_product_count(response_text: str, products: List[Dict[str, Any]]) -> str:
+    if len(products) <= 1:
+        return response_text
+    replacements = {
+        "Here's a great option to consider:": "Here are some good options to consider:",
+        "Here’s a great option to consider:": "Here are some good options to consider:",
+        "Here is a great option to consider:": "Here are some good options to consider:",
+    }
+    aligned = response_text
+    for original, replacement in replacements.items():
+        aligned = aligned.replace(original, replacement)
+    return aligned
+
+
 def local_chat_response(message: str) -> Dict[str, Any]:
     text = message.lower()
     condition = infer_chat_condition(message)
+    wants_products = wants_product_recommendations(message)
     product_keywords: List[str] = []
 
     if any(word in text for word in ["routine", "regimen", "steps", "morning", "night"]):
@@ -158,16 +538,30 @@ def local_chat_response(message: str) -> Dict[str, Any]:
             "If symptoms are painful, spreading, scarring, or not improving after several weeks, check in with a dermatologist."
         )
         product_keywords = ["cleanser", "treatment", "moisturizer"]
-    elif any(word in text for word in ["benzoyl", "salicylic", "retinol", "adapalene", "niacinamide"]):
+    elif any(
+        word in text
+        for word in [
+            "benzoyl",
+            "salicylic",
+            "retinol",
+            "adapalene",
+            "niacinamide",
+            "kojic",
+            "azelaic",
+            "tranexamic",
+            "arbutin",
+        ]
+    ):
         response = (
-            "Those are common acne-support ingredients, but they work differently:\n\n"
+            "Those are useful active ingredients, but they work differently:\n\n"
             "- Salicylic acid helps unclog pores and can be useful for blackheads or oily skin.\n"
             "- Benzoyl peroxide targets acne-causing bacteria and inflamed breakouts.\n"
             "- Adapalene supports cell turnover and is often useful for persistent acne.\n"
             "- Niacinamide can help calm redness and support the skin barrier.\n\n"
+            "- Kojic acid, tranexamic acid, azelaic acid, and alpha arbutin are often used for dark spots or uneven tone.\n\n"
             "Pick one strong active at a time, moisturize well, and use sunscreen during the day."
         )
-        product_keywords = ["salicylic", "benzoyl", "adapalene"]
+        product_keywords = ["kojic", "serum"] if "kojic" in text else ["salicylic", "benzoyl", "adapalene"]
     elif any(word in text for word in ["dry", "irritated", "barrier", "sensitive", "burning"]):
         response = (
             "For dryness or irritation, simplify for a few days:\n\n"
@@ -194,8 +588,14 @@ def local_chat_response(message: str) -> Dict[str, Any]:
             "Tell me your main concern, like acne, dryness, redness, oily skin, or dark spots, and I can tailor the advice."
         )
 
-    products = []
-    if product_keywords:
+    products = products_for_chat_message(message, condition) if wants_products else []
+    if wants_products:
+        products = merge_products(
+            products,
+            search_local_product_catalog(message, condition, limit=8),
+            limit=16,
+        )
+    if not products and product_keywords:
         products = get_recommender().recommend_for_condition(
             condition,
             budget_max=None,
@@ -205,7 +605,115 @@ def local_chat_response(message: str) -> Dict[str, Any]:
         if not products:
             products = get_recommender().recommend_for_condition(condition, top_n=5)
 
-    return normalize_json({"response": response, "products": products[:5]})
+    return normalize_json({"response": align_response_with_product_count(response, products), "products": products})
+
+
+def build_step_recommendations(condition: str, per_step: int = 2, query: str = "") -> List[Dict[str, Any]]:
+    recommender = get_recommender()
+    catalog_df = recommender.get_combined_products([condition])
+    selected: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for step, keywords in ROUTINE_STEPS.items():
+        step_products = [
+            product.copy()
+            for product in CURATED_MARKETPLACE_PRODUCTS
+            if product["category"] == step
+        ][:1]
+
+        for product in step_products:
+            product["routine_step"] = step
+            seen.add(product_identity(product))
+            selected.append(product)
+
+        for product in products_for_step(step, query=query or condition, limit=per_step):
+            if len([item for item in selected if item.get("routine_step") == step]) >= per_step:
+                break
+            product["routine_step"] = step
+            product["category"] = step
+            identity = product_identity(product)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            selected.append(product)
+
+        if not catalog_df.empty and len(step_products) < per_step:
+            df = catalog_df.copy()
+            title_matches = df["title"].str.contains("|".join(keywords), case=False, na=False)
+            if "category" in df.columns:
+                category_values = df["category"].astype(str).str.lower()
+                category_matches = category_values.isin(STEP_CATEGORY_ALIASES[step])
+                known_step_categories = {
+                    category
+                    for aliases in STEP_CATEGORY_ALIASES.values()
+                    for category in aliases
+                }
+                non_conflicting_title_match = ~category_values.isin(known_step_categories)
+            else:
+                category_matches = title_matches & False
+                non_conflicting_title_match = title_matches
+            matches = df[category_matches | (title_matches & non_conflicting_title_match)].copy()
+
+            if not matches.empty:
+                matches = matches.sort_values(["rating", "reviews"], ascending=[False, False])
+                for product in matches.to_dict("records"):
+                    product["category"] = step
+                    product["routine_step"] = step
+                    identity = product_identity(product)
+                    if identity in seen:
+                        continue
+                    seen.add(identity)
+                    selected.append(product)
+                    if len([item for item in selected if item.get("routine_step") == step]) >= per_step:
+                        break
+
+        if len([item for item in selected if item.get("routine_step") == step]) < per_step:
+            for product in CURATED_MARKETPLACE_PRODUCTS:
+                if product["category"] != step:
+                    continue
+                identity = product_identity(product)
+                if identity in seen:
+                    continue
+                fallback_product = product.copy()
+                fallback_product["routine_step"] = step
+                seen.add(identity)
+                selected.append(fallback_product)
+                if len([item for item in selected if item.get("routine_step") == step]) >= per_step:
+                    break
+
+    return selected
+
+
+def merge_products(*product_groups: List[Dict[str, Any]], limit: int = 16) -> List[Dict[str, Any]]:
+    merged: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for products in product_groups:
+        for product in products:
+            identity = product_identity(product)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            merged.append(product)
+            if len(merged) >= limit:
+                return merged
+    return merged
+
+
+def try_live_product_search(query: str, limit: int = 12) -> List[Dict[str, Any]]:
+    if os.getenv("ENABLE_LIVE_PRODUCT_SEARCH", "true").lower() in {"0", "false", "no"}:
+        return []
+    try:
+        return search_live_catalog(query, limit=limit)
+    except Exception as exc:
+        logger.info("Live product search unavailable: %s", exc)
+        return []
+
+
+def product_identity(product: Dict[str, Any]) -> str:
+    return "|".join(
+        str(product.get(key, "")).lower()
+        for key in ["retailer", "brand", "asin", "title", "name", "link"]
+    )
 
 
 @app.get("/")
@@ -234,8 +742,22 @@ async def upload_image(
         raise HTTPException(status_code=400, detail="Could not process this image.") from exc
 
     filename = f"{uuid.uuid4().hex}.png"
-    image_path = UPLOAD_DIR / filename
-    image_path.write_bytes(clean_bytes)
+    storage_result = {
+        "provider": "local",
+        "key": filename,
+        "url": public_upload_url(filename),
+    }
+
+    if is_s3_configured():
+        try:
+            storage_result = upload_image_to_s3(clean_bytes, filename, "image/png")
+        except RuntimeError as exc:
+            logger.warning("S3 upload failed; falling back to local upload storage: %s", exc)
+            image_path = UPLOAD_DIR / filename
+            image_path.write_bytes(clean_bytes)
+    else:
+        image_path = UPLOAD_DIR / filename
+        image_path.write_bytes(clean_bytes)
 
     if os.getenv("GOOGLE_API_KEY"):
         ai_analysis = await perform_ensemble_analysis(clean_bytes, "image/png")
@@ -259,8 +781,9 @@ async def upload_image(
         {
             "message": "Image analyzed successfully",
             "user_id": user_id,
-            "s3_path": public_upload_url(filename),
-            "s3_key": filename,
+            "s3_path": storage_result["url"],
+            "s3_key": storage_result["key"],
+            "storage_provider": storage_result["provider"],
             "ai_analysis": ai_analysis,
             "product_recommendations": product_recommendations,
         }
@@ -290,20 +813,51 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
         response_data = chatbot.chat(request.message, request.conversation_history)
         product_names = response_data.get("recommended_products", [])
         products = get_recommender().find_products_by_names(product_names) if product_names else []
+        if wants_product_recommendations(request.message):
+            condition = infer_chat_condition(request.message)
+            products = merge_products(
+                products,
+                products_for_chat_message(request.message, condition),
+                limit=16,
+            )
         return normalize_json(
             {
-                "response": response_data.get("response_text", ""),
-                "products": products[:5],
+                "response": align_response_with_product_count(response_data.get("response_text", ""), products),
+                "products": products,
             }
         )
     except Exception as exc:
-        logger.exception("Chat request failed")
-        raise HTTPException(status_code=502, detail="Chat service is temporarily unavailable.") from exc
+        logger.warning("Gemini chat failed; using local skincare fallback: %s", exc)
+        return local_chat_response(request.message)
 
 
 @app.post("/api/image-url")
 def image_url(request: ImageUrlRequest) -> Dict[str, str]:
+    if is_s3_configured() and looks_like_s3_key(request.s3_key):
+        url = presigned_s3_url(request.s3_key)
+        if not url:
+            raise HTTPException(status_code=404, detail="Image not found.")
+        return {"url": url}
+
     image_path = UPLOAD_DIR / Path(request.s3_key).name
     if not image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found.")
     return {"url": public_upload_url(image_path.name)}
+
+
+@app.post("/api/live-products/search")
+def live_product_search(request: LiveProductSearchRequest) -> Dict[str, Any]:
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+
+    live_products = try_live_product_search(request.query, limit=request.limit)
+    verified_products = search_verified_catalog(request.query, limit=request.limit)
+    products = merge_products(live_products, verified_products, limit=request.limit)
+    return normalize_json(
+        {
+            "query": request.query,
+            "live_count": len(live_products),
+            "verified_count": len(verified_products),
+            "products": products,
+        }
+    )

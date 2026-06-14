@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY src/ ./src/
-COPY data/*_enriched.csv ./data/
+COPY data/*.csv ./data/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
