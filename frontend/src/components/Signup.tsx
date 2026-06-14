@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { signUp } from 'aws-amplify/auth';
+import { getErrorMessage } from '../types';
 
 interface SignupProps {
   onSuccess: (email: string) => void;
@@ -40,9 +41,9 @@ export const Signup: React.FC<SignupProps> = ({ onSuccess, onSwitchToLogin }) =>
       if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
         onSuccess(email);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Signup error:', err);
-      setError(err.message || 'Failed to sign up');
+      setError(getErrorMessage(err, 'Failed to sign up'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,10 @@ export const Signup: React.FC<SignupProps> = ({ onSuccess, onSwitchToLogin }) =>
             />
             <button
               type="button"
-              onClick={() => {setShowPassword(!showPassword), setShowConfirmPassword(!showConfirmPassword)}}
+              onClick={() => {
+                setShowPassword(!showPassword);
+                setShowConfirmPassword(!showConfirmPassword);
+              }}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
             >
               {showPassword ? (

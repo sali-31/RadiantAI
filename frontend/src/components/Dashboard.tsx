@@ -34,29 +34,27 @@ interface Props {
 }
 
 export const Dashboard: React.FC<Props> = ({ onStartAnalysis, onViewProducts, onViewResults, analysisData }) => {
-    const [stats, setStats] = useState<DashboardStats>({
-        currentStreak: 0,
-        longestStreak: 0,
-        totalDays: 0,
-        logs: [],
+    const [stats, setStats] = useState<DashboardStats>(() => {
+        const fallback = {
+            currentStreak: 0,
+            longestStreak: 0,
+            totalDays: 0,
+            logs: [],
+        };
+        const saved = localStorage.getItem('lesionrec_dashboard_stats');
+        if (!saved) return fallback;
+        try {
+            return JSON.parse(saved) as DashboardStats;
+        } catch {
+            console.error("Failed to parse dashboard stats");
+            return fallback;
+        }
     });
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [diaryNote, setDiaryNote] = useState<string>('');
     const [skinCondition, setSkinCondition] = useState<string>('normal');
     const [mood, setMood] = useState<string>('good');
     const [showDiaryModal, setShowDiaryModal] = useState(false);
-
-    // Load stats from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('lesionrec_dashboard_stats');
-        if (saved) {
-            try {
-                setStats(JSON.parse(saved));
-            } catch (e) {
-                console.error("Failed to parse dashboard stats");
-            }
-        }
-    }, []);
 
     // Save stats to localStorage whenever they change
     useEffect(() => {
@@ -65,53 +63,54 @@ export const Dashboard: React.FC<Props> = ({ onStartAnalysis, onViewProducts, on
 
     // Auto-save analysis to diary when available
     useEffect(() => {
-        if (analysisData && stats.logs) {
+        if (!analysisData) return;
+
+        try {
             const today = new Date().toISOString().split('T')[0];
-            // We need to use a functional update to ensure we have the latest stats
-            // However, since stats is in the dependency array of the saver, we can just update it here.
-            // But we need to be careful not to create an infinite loop.
-            // We check if the log for today already has this specific analysis data.
-            
-            const existingLogIndex = stats.logs.findIndex(l => l.date === today);
-            let log = existingLogIndex >= 0 ? { ...stats.logs[existingLogIndex] } : { date: today, completed: false };
-            
-            // Only update if analysisSummary is missing
-            if (!log.analysisSummary) {
-                try {
-                    const analysisJson = JSON.parse(analysisData.ai_analysis.analysis);
-                    
-                    const newLog: DailyLog = {
-                        ...log,
-                        analysisSummary: {
-                            condition: analysisJson.condition,
-                            severity: analysisJson.severity
-                        },
-                        routine: analysisData.product_recommendations?.bundle?.map((p: Product, index: number) => ({
-                            id: p.id || `prod-${index}-${Date.now()}`,
-                            name: p.title || p.name || 'Unknown Product',
-                            category: p.category || 'General',
-                            completed: false
-                        })) || []
-                    };
+            const analysisJson = JSON.parse(analysisData.ai_analysis.analysis);
 
-                    const newLogs = [...stats.logs];
-                    if (existingLogIndex >= 0) {
-                        newLogs[existingLogIndex] = newLog;
-                    } else {
-                        newLogs.push(newLog);
-                    }
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setStats(prev => {
+                const existingLogIndex = prev.logs.findIndex(l => l.date === today);
+                const log: DailyLog = existingLogIndex >= 0
+                    ? { ...prev.logs[existingLogIndex] }
+                    : { date: today, completed: false };
 
-                    setStats(prev => ({
-                        ...prev,
-                        logs: newLogs
-                    }));
-                } catch (e) {
-                    console.error("Error parsing analysis for diary", e);
+                if (log.analysisSummary) {
+                    return prev;
                 }
-            }
+
+                const newLog: DailyLog = {
+                    ...log,
+                    analysisSummary: {
+                        condition: analysisJson.condition || analysisJson.detected_conditions?.[0]?.condition || 'Skin analysis',
+                        severity: analysisJson.severity || analysisJson.detected_conditions?.[0]?.severity || 'Unknown'
+                    },
+                    routine: analysisData.product_recommendations?.bundle?.map((p: Product, index: number) => ({
+                        id: p.id || `prod-${index}-${Date.now()}`,
+                        name: p.title || p.name || 'Unknown Product',
+                        category: p.category || 'General',
+                        completed: false
+                    })) || []
+                };
+
+                const newLogs = [...prev.logs];
+                if (existingLogIndex >= 0) {
+                    newLogs[existingLogIndex] = newLog;
+                } else {
+                    newLogs.push(newLog);
+                }
+
+                return {
+                    ...prev,
+                    logs: newLogs
+                };
+            });
+        } catch (error) {
+            console.error("Error parsing analysis for diary", error);
         }
-    }, [analysisData, stats.logs.length]); // Depend on logs.length to avoid deep cycle, but might miss updates. 
-    // Actually, better to just check if today's log has analysis.
+    }, [analysisData]);
+
 
     const loadDiaryForDate = (date: string) => {
         const log = stats.logs.find(log => log.date === date);
@@ -146,12 +145,7 @@ export const Dashboard: React.FC<Props> = ({ onStartAnalysis, onViewProducts, on
 
     const saveDiary = () => {
         const newStats = { ...stats };
-        let log = newStats.logs.find(l => l.date === selectedDate);
-        
-        if (!log) {
-            log = { date: selectedDate, completed: false };
-            newStats.logs.push(log);
-        }
+        const log = existingOrNewLog(newStats, selectedDate);
         
         log.notes = diaryNote;
         log.skinCondition = skinCondition;
@@ -178,7 +172,7 @@ export const Dashboard: React.FC<Props> = ({ onStartAnalysis, onViewProducts, on
 
         let currentStreak = 0;
         const today = new Date();
-        let checkDate = new Date(today);
+        const checkDate = new Date(today);
 
         for (let i = 0; i < 365; i++) {
             const dateStr = checkDate.toISOString().split('T')[0];
@@ -211,6 +205,14 @@ export const Dashboard: React.FC<Props> = ({ onStartAnalysis, onViewProducts, on
         }
         longestStreak = Math.max(longestStreak, tempStreak);
         dashboardStats.longestStreak = longestStreak;
+    };
+
+    const existingOrNewLog = (dashboardStats: DashboardStats, date: string): DailyLog => {
+        const existing = dashboardStats.logs.find(l => l.date === date);
+        if (existing) return existing;
+        const log: DailyLog = { date, completed: false };
+        dashboardStats.logs.push(log);
+        return log;
     };
 
     // Generate week days

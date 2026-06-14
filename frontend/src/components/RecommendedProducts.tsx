@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import type { AnalysisResponse } from '../types';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AnalysisResponse, Product } from '../types';
 import { ProductRoutine } from './ProductRoutine';
+
+type SortOption = 'default' | 'price_asc' | 'price_desc' | 'rating' | 'reviews';
 
 interface Props {
     data: AnalysisResponse;
@@ -9,10 +11,10 @@ interface Props {
 
 export const RecommendedProducts = ({ data, onBack }: Props) => {
     const [budget, setBudget] = useState<string>('');
-    const [currentBundle, setCurrentBundle] = useState(data.product_recommendations.bundle || []);
-    const [allRecommendations, setAllRecommendations] = useState(data.product_recommendations.recommendations || []);
-    const [fullCatalog, setFullCatalog] = useState(data.product_recommendations.full_catalog || []);
-    const [sortBy, setSortBy] = useState<'default' | 'price_asc' | 'price_desc' | 'rating' | 'reviews'>('default');
+    const [currentBundle, setCurrentBundle] = useState<Product[]>(data.product_recommendations.bundle || []);
+    const [allRecommendations, setAllRecommendations] = useState<Product[]>(data.product_recommendations.recommendations || []);
+    const [fullCatalog, setFullCatalog] = useState<Product[]>(data.product_recommendations.full_catalog || []);
+    const [sortBy, setSortBy] = useState<SortOption>('default');
     const [isUpdating, setIsUpdating] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 8;
@@ -22,14 +24,7 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
     });
     const [lastUpdatedBudget, setLastUpdatedBudget] = useState<string | null>(null);
 
-    // Automatically fetch bundle if it's empty but we have analysis
-    React.useEffect(() => {
-        if (currentBundle.length === 0 && data.ai_analysis.analysis) {
-            handleUpdateBundle();
-        }
-    }, []);
-
-    const handleUpdateBundle = async () => {
+    const handleUpdateBundle = useCallback(async () => {
         setIsUpdating(true);
         try {
             const payload = {
@@ -48,7 +43,7 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
 
             if (response.ok) {
                 const result = await response.json();
-                setCurrentBundle(result.bundle);
+                setCurrentBundle(result.bundle || []);
                 setAllRecommendations(result.recommendations || []);
                 setFullCatalog(result.full_catalog || []);
                 setBundleStats({
@@ -64,9 +59,16 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
         } finally {
             setIsUpdating(false);
         }
-    };
+    }, [budget, data.ai_analysis.analysis]);
 
-    const getSortedProducts = (products: any[], sort: string) => {
+    // Automatically fetch bundle if it's empty but we have analysis
+    useEffect(() => {
+        if (currentBundle.length === 0 && data.ai_analysis.analysis) {
+            void handleUpdateBundle();
+        }
+    }, [currentBundle.length, data.ai_analysis.analysis, handleUpdateBundle]);
+
+    const getSortedProducts = (products: Product[], sort: SortOption) => {
         if (sort === 'default') return products;
         
         return [...products].sort((a, b) => {
@@ -96,9 +98,9 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
     };
 
     // Derived state for display
-    const displayedCatalog = getSortedProducts(fullCatalog, sortBy);
-    const displayedTopPicks = sortBy === 'default' 
-        ? allRecommendations 
+    const displayedCatalog = useMemo(() => getSortedProducts(fullCatalog, sortBy), [fullCatalog, sortBy]);
+    const displayedTopPicks = sortBy === 'default'
+        ? allRecommendations
         : displayedCatalog.slice(0, 5); // When sorted, show top 5 from the sorted full catalog
 
     return (
@@ -181,7 +183,7 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
                             <label className="text-sm font-medium text-gray-700">Sort by:</label>
                             <select 
                                 value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value as any)}
+                                onChange={(e) => setSortBy(e.target.value as SortOption)}
                                 className="block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
                             >
                                 <option value="default">Default (Recommended)</option>
@@ -193,7 +195,7 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {displayedTopPicks.map((product: any, idx: number) => (
+                        {displayedTopPicks.map((product: Product, idx: number) => (
                             <ProductCard key={idx} product={product} />
                         ))}
                     </div>
@@ -206,7 +208,7 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
                     <h3 className="text-2xl font-bold text-gray-900 mb-6">All Matching Products</h3>
                     <p className="text-gray-500 mb-6">Complete catalog of products matching your skin analysis.</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {displayedCatalog.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((product: any, idx: number) => (
+                        {displayedCatalog.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((product: Product, idx: number) => (
                             <ProductCard key={`catalog-${idx}`} product={product} />
                         ))}
                     </div>
@@ -239,7 +241,7 @@ export const RecommendedProducts = ({ data, onBack }: Props) => {
     );
 };
 
-export const ProductCard = ({ product, compact = false }: { product: any, compact?: boolean }) => (
+export const ProductCard = ({ product, compact = false }: { product: Product, compact?: boolean }) => (
     <div className={`border rounded-lg hover:shadow-md transition-shadow bg-white flex flex-col h-full ${compact ? 'p-3 min-w-[180px]' : 'p-4'}`}>
         <div className={`${compact ? 'h-32' : 'h-48'} flex items-center justify-center mb-4 bg-gray-50 rounded-md overflow-hidden relative group`}>
             {product.thumbnail ? (
@@ -250,8 +252,8 @@ export const ProductCard = ({ product, compact = false }: { product: any, compac
         </div>
         <div className="grow">
             <div className="text-xs font-bold text-blue-600 uppercase mb-1">{product.category || 'Product'}</div>
-            <h4 className={`font-medium text-gray-900 line-clamp-2 mb-2 ${compact ? 'text-xs' : 'text-sm'}`} title={product.title}>
-                {product.title}
+            <h4 className={`font-medium text-gray-900 line-clamp-2 mb-2 ${compact ? 'text-xs' : 'text-sm'}`} title={product.title || product.name}>
+                {product.title || product.name}
             </h4>
             <div className="flex items-center mb-2">
                 <span className="text-yellow-400 mr-1 text-xs">★</span>
@@ -260,7 +262,7 @@ export const ProductCard = ({ product, compact = false }: { product: any, compac
         </div>
         <div className={`flex items-center justify-between border-t border-gray-100 ${compact ? 'mt-2 pt-2' : 'mt-4 pt-4'}`}>
             <span className={`${compact ? 'text-sm' : 'text-lg'} font-bold text-gray-900`}>
-                ${typeof product.price_numeric === 'number' ? product.price_numeric.toFixed(2) : product.price}
+                {typeof product.price_numeric === 'number' ? `$${product.price_numeric.toFixed(2)}` : product.price}
             </span>
             <a 
                 href={product.link} 

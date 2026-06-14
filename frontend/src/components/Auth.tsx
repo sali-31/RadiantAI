@@ -33,7 +33,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
             <div className="w-full max-w-md relative z-10 animate-fade-in">
                 <div className="text-center mb-8">
                 <h1 className="text-4xl font-bold bg-linear-to-r from-primary via-secondary to-primary bg-clip-text text-transparent mb-2">
-                Lumina
+                RadiantAI
                 </h1>
                 <p className="text-muted-foreground text-sm">
                 AI-Powered Skin Lesion Detection

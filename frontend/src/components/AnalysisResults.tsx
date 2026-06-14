@@ -96,20 +96,6 @@ export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
                                     e.currentTarget.src = 'https://placehold.co/600x400?text=Image+Protected';
                                 }}
                             />
-                            {/* Overlay Bounding Boxes - DISABLED FOR NOW */}
-                            {false && diagnosis?.blemish_regions?.map((region, idx) => (
-                                <div
-                                    key={idx}
-                                    className="absolute border-2 border-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors cursor-help"
-                                    style={{
-                                        left: `${region.x_min * 100}%`,
-                                        top: `${region.y_min * 100}%`,
-                                        width: `${(region.x_max - region.x_min) * 100}%`,
-                                        height: `${(region.y_max - region.y_min) * 100}%`,
-                                    }}
-                                    title={`${region.type}${region.severity ? ` - ${region.severity}` : ''} (${Math.round(region.confidence * 100)}% confidence)`}
-                                />
-                            ))}
                         </div>
                         <div className="mt-6 flex items-center text-sm text-gray-500 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">
                             <span className="mr-2">🛡️</span>

@@ -8,13 +8,24 @@ import { Dashboard } from './components/Dashboard';
 import { UserProfile } from './components/UserProfile';
 import { Chatbot } from './components/Chatbot';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import type { AnalysisResponse } from './types';
+import type { AnalysisResponse, AppUser } from './types';
 
 type ViewState = 'dashboard' | 'upload' | 'results' | 'products' | 'chat' | 'analysis' | 'profile';
 type TabState = 'dashboard' | 'analysis' | 'chat' | 'profile';
 
+const hasCognitoConfig = Boolean(
+  import.meta.env.VITE_COGNITO_USER_POOL_ID && import.meta.env.VITE_COGNITO_CLIENT_ID
+);
+
+const demoUser = {
+  userId: 'local-demo-user',
+  username: 'local-demo-user',
+  given_name: 'Demo',
+  email: 'demo@radiantai.local',
+};
+
 function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const [activeTab, setActiveTab] = useState<TabState>('dashboard');
@@ -28,7 +39,7 @@ function App() {
     if (saved) {
       try {
         setAnalysisData(JSON.parse(saved));
-      } catch (e) {
+      } catch {
         console.error("Failed to parse saved analysis");
         localStorage.removeItem('lesionrec_last_analysis');
       }
@@ -36,11 +47,17 @@ function App() {
   }, []);
 
   async function checkUser() {
+    if (!hasCognitoConfig) {
+      setUser(demoUser);
+      setLoading(false);
+      return;
+    }
+
     try {
       const currentUser = await getCurrentUser();
       const userAttributes = await fetchUserAttributes();
       setUser({ ...currentUser, ...userAttributes });
-    } catch (err) {
+    } catch {
       setUser(null);
     } finally {
       setLoading(false);
@@ -48,6 +65,15 @@ function App() {
   }
 
   async function handleSignOut() {
+    if (!hasCognitoConfig) {
+      setAnalysisData(null);
+      localStorage.removeItem('lesionrec_last_analysis');
+      setCurrentView('dashboard');
+      setActiveTab('dashboard');
+      setUser(demoUser);
+      return;
+    }
+
     try {
       await signOut();
       setUser(null);
@@ -86,7 +112,7 @@ function App() {
           
           <div className="flex justify-center">
             <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">
-              Lumina
+              RadiantAI
             </h1>
           </div>
 
@@ -198,7 +224,7 @@ function App() {
                   )}
                 </div>
                 <ImageUpload 
-                  userId={user.userId} 
+                  userId={user.userId || user.username || 'anonymous'} 
                   onAnalysisComplete={handleAnalysisComplete} 
                 />
               </>
@@ -230,7 +256,7 @@ function App() {
 
         {/* Chat Tab */}
         {activeTab === 'chat' && currentView === 'chat' && (
-          <Chatbot userId={user.userId} />
+          <Chatbot userId={user.userId || user.username || 'anonymous'} />
         )}
 
         {/* Profile Tab */}

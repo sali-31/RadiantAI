@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { signIn } from 'aws-amplify/auth';
+import { getErrorMessage } from '../types';
 
 interface LoginProps {
   onSuccess: () => void;
@@ -25,9 +26,9 @@ export const Login: React.FC<LoginProps> = ({ onSuccess, onSwitchToSignup }) => 
       } else {
         console.log('Next step:', nextStep);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to login');
+      setError(getErrorMessage(err, 'Failed to login'));
     } finally {
       setLoading(false);
     }

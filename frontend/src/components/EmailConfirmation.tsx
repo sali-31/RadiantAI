@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
+import { getErrorMessage } from '../types';
 
 interface EmailConfirmationProps {
   email: string;
@@ -27,9 +28,9 @@ export const EmailConfirmation: React.FC<EmailConfirmationProps> = ({ email, onS
       if (isSignUpComplete) {
         onSuccess();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Confirmation error:', err);
-      setError(err.message || 'Failed to confirm email');
+      setError(getErrorMessage(err, 'Failed to confirm email'));
     } finally {
       setLoading(false);
     }
@@ -40,9 +41,9 @@ export const EmailConfirmation: React.FC<EmailConfirmationProps> = ({ email, onS
       await resendSignUpCode({ username: email });
       setMessage('Confirmation code resent successfully');
       setError('');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Resend code error:', err);
-      setError(err.message || 'Failed to resend code');
+      setError(getErrorMessage(err, 'Failed to resend code'));
     }
   };
 

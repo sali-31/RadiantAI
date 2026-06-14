@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { fetchUserAttributes, updateUserAttribute } from 'aws-amplify/auth';
+import type { AppUser } from '../types';
 
 interface Props {
-    user: any;
+    user: AppUser;
     onSignOut: () => void;
 }
 
 export const UserProfile: React.FC<Props> = ({ user, onSignOut }) => {
-    const [attributes, setAttributes] = useState<any>({});
+    const [attributes, setAttributes] = useState<Partial<Record<string, string>>>({});
     const [isEditingName, setIsEditingName] = useState(false);
     const [firstName, setFirstName] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (user?.given_name) {
-            setAttributes(user);
+            setAttributes({
+                given_name: user.given_name,
+                email: user.email,
+            });
             setFirstName(user.given_name);
             setLoading(false);
         } else {

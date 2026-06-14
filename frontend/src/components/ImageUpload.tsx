@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from "react"
 import type { AnalysisResponse } from "../types";
-import { removeBackground } from "@imgly/background-removal";
 
 type CaptureMode = 'file' | 'camera' | 'preview';
+
+interface CapturedMediaStream extends MediaStream {
+    _capturedWidth?: number;
+    _capturedHeight?: number;
+}
 
 interface ImageUploadProps {
     userId: string;
@@ -39,6 +43,7 @@ export const ImageUpload = ({ userId, onAnalysisComplete }: ImageUploadProps) =>
             };
 
             // 1. Remove Background
+            const { removeBackground } = await import("@imgly/background-removal");
             const blob = await removeBackground(file, config);
             
             // 2. Create a new File object (strips EXIF data automatically)
@@ -190,20 +195,21 @@ export const ImageUpload = ({ userId, onAnalysisComplete }: ImageUploadProps) =>
             if (actualSettings.width && actualSettings.height) {
                 console.log(`✓ Camera dimensions captured: ${actualSettings.width}x${actualSettings.height}`);
                 // Store in the stream object as a custom property for later access
-                (mediaStream as any)._capturedWidth = actualSettings.width;
-                (mediaStream as any)._capturedHeight = actualSettings.height;
+                (mediaStream as CapturedMediaStream)._capturedWidth = actualSettings.width;
+                (mediaStream as CapturedMediaStream)._capturedHeight = actualSettings.height;
             }
 
             // 2: Store steam and switch to camera mode
             setStream(mediaStream);
             setCaptureMode('camera');
 
-        } catch (error: any) {
-            if (error.name === 'NotAllowedError') {
+        } catch (error: unknown) {
+            const errorName = error instanceof DOMException ? error.name : '';
+            if (errorName === 'NotAllowedError') {
                 setCameraError('Camera permission denied. Please allow camera access in your browser settings.');
-                } else if (error.name === 'NotFoundError') {
+                } else if (errorName === 'NotFoundError') {
                 setCameraError('No camera found on this device.');
-                } else if (error.name === 'NotReadableError') {
+                } else if (errorName === 'NotReadableError') {
                 setCameraError('Camera is already in use by another application.');
                 } else {
                 setCameraError('Could not access camera. Please try again.');
@@ -229,8 +235,8 @@ export const ImageUpload = ({ userId, onAnalysisComplete }: ImageUploadProps) =>
         // If video element dimensions are invalid, we'll try multiple fallback strategies
         if (captureWidth <= 2 || captureHeight <= 2) {
             // Strategy 1: Use captured dimensions from when stream was created
-            const storedWidth = (stream as any)._capturedWidth;
-            const storedHeight = (stream as any)._capturedHeight;
+            const storedWidth = (stream as CapturedMediaStream)._capturedWidth;
+            const storedHeight = (stream as CapturedMediaStream)._capturedHeight;
 
             if (storedWidth && storedHeight) {
                 captureWidth = storedWidth;

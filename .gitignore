@@ -48,6 +48,7 @@ backend/data/raw/
 backend/data/processed/
 backend/data/samples/
 backend/data/yolo_dataset/
+backend/uploads/
 **/yolo_dataset/
 
 # DVC
