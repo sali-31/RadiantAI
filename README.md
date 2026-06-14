@@ -84,7 +84,7 @@ This project emphasizes several core Data Science competencies:
 
 ---
 
-##  and Ethics
+## Privacy and Ethics
 
 RadiantAI is designed using privacy-by-design principles:
 
