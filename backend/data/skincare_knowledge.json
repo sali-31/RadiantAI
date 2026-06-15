@@ -1,0 +1,100 @@
+[
+  {
+    "id": "closed_comedones",
+    "title": "Closed comedones and clogged pores",
+    "intents": ["routine_request", "general_question"],
+    "concerns": ["closed_comedones", "acne"],
+    "text": "Closed comedones are clogged pores that look like tiny skin-colored bumps, often on the forehead, cheeks, or chin. A good routine is gentle cleanser, lightweight non-comedogenic moisturizer, sunscreen every morning, and one pore-focused active at night. Salicylic acid helps inside oily clogged pores. Adapalene helps persistent comedonal acne and texture. Start one active 2-3 nights per week, avoid harsh scrubs, and moisturize to reduce irritation."
+  },
+  {
+    "id": "application_timing",
+    "title": "How long to wait between skincare steps",
+    "intents": ["application_timing", "general_question"],
+    "concerns": ["general_skincare"],
+    "text": "Most skincare steps do not need long wait times. Apply thin, watery products first, then serums, moisturizer, and sunscreen in the morning. Usually 30-60 seconds between steps is enough, or until the product no longer feels very wet. Wait longer only for benzoyl peroxide to dry before clothes, prescription treatments if directed, or sunscreen before makeup/outdoor exposure. Sunscreen should be the last morning step and can be given about 10-15 minutes to set before makeup."
+  },
+  {
+    "id": "brightening",
+    "title": "Brightening and dullness ingredients",
+    "intents": ["ingredient_question", "routine_request"],
+    "concerns": ["brightening", "dullness"],
+    "text": "Brightening and dullness respond to consistent sunscreen, hydration, gentle exfoliation, and pigment-supporting ingredients. Vitamin C is useful in the morning for glow and antioxidant support. Niacinamide supports barrier, dullness, redness, and oil balance. Tranexamic acid and alpha arbutin are pigment-focused. Azelaic acid can help uneven tone, acne-prone skin, and redness. AHAs like lactic or glycolic acid help surface dullness 1-3 nights per week. Retinoids help texture and long-term tone at night."
+  },
+  {
+    "id": "dark_spots",
+    "title": "Dark spots and hyperpigmentation",
+    "intents": ["routine_request", "ingredient_question", "general_question"],
+    "concerns": ["dark_spots", "hyperpigmentation", "melasma"],
+    "text": "Dark spots and hyperpigmentation fade slowly over weeks to months. Daily broad-spectrum sunscreen is essential because UV and visible light can worsen pigment. Helpful ingredients include tranexamic acid, azelaic acid, alpha arbutin, niacinamide, vitamin C, and retinoids. Avoid stacking many actives at once; build a routine around sunscreen, one pigment treatment, moisturizer, and slow introduction."
+  },
+  {
+    "id": "acne",
+    "title": "Acne routine basics",
+    "intents": ["routine_request", "general_question"],
+    "concerns": ["acne"],
+    "text": "Acne routines should treat breakouts without stripping the skin. Use a gentle cleanser, non-comedogenic moisturizer, and sunscreen. Salicylic acid helps blackheads, whiteheads, and clogged pores. Benzoyl peroxide helps inflamed pimples but can bleach fabric. Adapalene is useful for persistent acne and comedones. Start one active at a time and increase slowly."
+  },
+  {
+    "id": "anti_aging",
+    "title": "Anti-aging routine",
+    "intents": ["routine_request", "ingredient_question"],
+    "concerns": ["anti_aging"],
+    "text": "Anti-aging routines focus on sunscreen, retinoids, barrier support, and optional antioxidants. Morning: gentle cleanse or rinse, optional vitamin C, moisturizer, broad-spectrum sunscreen. Night: cleanser, retinoid 2-3 nights weekly to start, moisturizer. Peptides can be optional support. Go slowly if dry or sensitive."
+  },
+  {
+    "id": "sensitive_skin",
+    "title": "Sensitive skin and redness",
+    "intents": ["routine_request", "general_question", "safety_or_medical"],
+    "concerns": ["sensitive_skin", "redness"],
+    "text": "Sensitive or redness-prone skin usually needs a low-irritation routine: gentle cleanser, fragrance-free moisturizer, barrier-support ingredients, and daily sunscreen. Introduce actives one at a time. Azelaic acid can be useful for redness and acne-prone skin if tolerated. Burning, swelling, spreading rash, or persistent symptoms should be checked by a clinician."
+  },
+  {
+    "id": "dry_skin",
+    "title": "Dry and flaky skin",
+    "intents": ["routine_request", "general_question"],
+    "concerns": ["dry_skin"],
+    "text": "Dry flaky skin benefits from a gentle or hydrating cleanser, moisturizer with ceramides, glycerin, or hyaluronic acid, and an occlusive layer such as petrolatum on very dry patches if appropriate. Avoid frequent exfoliation while skin is cracked or stinging. Sunscreen is still needed in the morning."
+  },
+  {
+    "id": "oily_skin",
+    "title": "Oily skin without over-drying",
+    "intents": ["routine_request", "ingredient_question", "product_recommendation"],
+    "concerns": ["oily_skin"],
+    "text": "Oily skin still needs moisturizer. Use a gentle cleanser, lightweight gel or lotion moisturizer, and sunscreen. Niacinamide can support oil balance. Salicylic acid can help clogged pores. Avoid stripping cleansers or skipping moisturizer, because irritation can make skin feel oilier."
+  },
+  {
+    "id": "barrier_repair",
+    "title": "Barrier repair",
+    "intents": ["routine_request", "general_question", "safety_or_medical"],
+    "concerns": ["barrier_repair", "sensitive_skin", "dry_skin"],
+    "text": "A damaged barrier often feels tight, shiny, stingy, flaky, or easily irritated. Pause exfoliating acids, retinoids, benzoyl peroxide, and strong vitamin C until calm. Use gentle cleanser, ceramide moisturizer, glycerin or hyaluronic acid if tolerated, sunscreen, and petrolatum on very dry areas. Reintroduce actives slowly."
+  },
+  {
+    "id": "sunscreen",
+    "title": "Sunscreen guidance",
+    "intents": ["general_question", "product_recommendation", "routine_request"],
+    "concerns": ["sunscreen", "dark_spots", "anti_aging", "brightening"],
+    "text": "Sunscreen is the final morning skincare step. Use enough for face and neck, often described as two finger lengths. Reapply every two hours when outdoors, sweating, or swimming. For dark spots or melasma, tinted sunscreen with iron oxides can help with visible light. Choose lightweight non-comedogenic formulas if sunscreen breaks you out."
+  },
+  {
+    "id": "retinoids",
+    "title": "Retinoids and retinol safety",
+    "intents": ["general_question", "ingredient_question", "routine_request"],
+    "concerns": ["anti_aging", "acne", "texture"],
+    "text": "Retinoids help acne, comedones, texture, fine lines, and post-acne marks. Use at night. Start 2-3 nights per week with a pea-sized amount for the whole face. Moisturizer can be used before and after to reduce irritation. Use sunscreen daily. Avoid retinoids during pregnancy unless a clinician specifically approves."
+  },
+  {
+    "id": "ingredient_mixing",
+    "title": "Ingredient mixing",
+    "intents": ["ingredient_question", "general_question"],
+    "concerns": ["general_skincare"],
+    "text": "Do not start multiple strong actives at the same time. Retinoids and glycolic acid are often better on alternate nights to reduce irritation. Vitamin C and niacinamide can be used together if tolerated. Benzoyl peroxide can be drying and may be separated from retinoids unless the product is designed for combined use. Moisturizer helps buffer irritation."
+  },
+  {
+    "id": "safety_red_flags",
+    "title": "Safety red flags",
+    "intents": ["safety_or_medical"],
+    "concerns": ["safety"],
+    "text": "Seek medical care for painful, rapidly spreading, hot, swollen, infected, pus-filled, blistering, or severe rashes; facial swelling; symptoms around the eyes; deep scarring acne; or symptoms that persist despite gentle care. Stop the suspected irritating product and avoid exfoliating acids or retinoids on broken, swollen, or actively inflamed skin."
+  }
+]

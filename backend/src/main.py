@@ -24,6 +24,8 @@ from .services.skincare_knowledge import (
     infer_concerns,
     infer_skin_type,
 )
+from .services.skincare_nlu import SkincareNLU
+from .services.skincare_rag import SkincareRAG
 from .services.storage import is_s3_configured, looks_like_s3_key, presigned_s3_url, upload_image_to_s3
 
 
@@ -290,6 +292,8 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
 _recommender: Optional[ProductRecommender] = None
 _chatbot: Optional[SkinHealthChatbot] = None
+_nlu: Optional[SkincareNLU] = None
+_rag: Optional[SkincareRAG] = None
 
 
 class RecommendRequest(BaseModel):
@@ -329,6 +333,20 @@ def get_chatbot() -> Optional[SkinHealthChatbot]:
         return None
     _chatbot = SkinHealthChatbot()
     return _chatbot
+
+
+def get_nlu() -> SkincareNLU:
+    global _nlu
+    if _nlu is None:
+        _nlu = SkincareNLU()
+    return _nlu
+
+
+def get_rag() -> SkincareRAG:
+    global _rag
+    if _rag is None:
+        _rag = SkincareRAG()
+    return _rag
 
 
 def public_upload_url(filename: str) -> str:
@@ -409,7 +427,26 @@ def infer_chat_condition(message: str) -> str:
     for condition, keywords in condition_keywords.items():
         if any(keyword in text for keyword in keywords):
             return condition
-    return "acne"
+    return "general_skincare"
+
+
+def condition_from_nlu(nlu: Dict[str, Any], fallback_message: str = "") -> str:
+    concerns = nlu.get("concerns") or []
+    concern_set = set(concerns)
+    if {"closed_comedones", "acne"} & concern_set:
+        return "acne"
+    if {"dark_spots", "hyperpigmentation", "melasma", "brightening", "dullness"} & concern_set:
+        return "hyperpigmentation"
+    if "anti_aging" in concern_set:
+        return "hyperpigmentation"
+    if "dry_skin" in concern_set:
+        return "dry_skin"
+    if "oily_skin" in concern_set:
+        return "oily_skin"
+    if {"sensitive_skin", "redness", "barrier_repair"} & concern_set:
+        return "sensitive_skin"
+    fallback = infer_chat_condition(fallback_message)
+    return fallback if fallback != "acne" else "general_skincare"
 
 
 def wants_product_recommendations(message: str) -> bool:
@@ -685,6 +722,30 @@ def product_names_from_context(products: List[Dict[str, Any]]) -> List[str]:
     return names
 
 
+def merge_memory_updates(
+    primary: Optional[Dict[str, Any]],
+    secondary: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    primary = primary or {}
+    secondary = secondary or {}
+    merged = {
+        "skin_type": primary.get("skin_type") or secondary.get("skin_type"),
+        "concerns": [],
+        "goals": [],
+        "preferences": [],
+        "avoid": [],
+    }
+    for key in ["concerns", "goals", "preferences", "avoid"]:
+        values: List[str] = []
+        for source in [primary, secondary]:
+            for value in source.get(key) or []:
+                clean = str(value).strip()
+                if clean and clean not in values and clean != "general_skincare":
+                    values.append(clean)
+        merged[key] = values
+    return merged
+
+
 def product_query_for_message(message: str, concerns: List[str], intent: Dict[str, bool]) -> str:
     concern_text = " ".join(concerns).replace("_", " ")
     if intent.get("serum_request"):
@@ -703,6 +764,31 @@ def product_query_for_message(message: str, concerns: List[str], intent: Dict[st
     return message
 
 
+def product_query_from_nlu(message: str, nlu: Dict[str, Any]) -> str:
+    concerns = [concern for concern in (nlu.get("concerns") or []) if concern != "general_skincare"]
+    concern_text = " ".join(concerns).replace("_", " ")
+    product_form = nlu.get("product_form")
+    intent = nlu.get("intent")
+
+    if product_form == "serum":
+        if {"brightening", "dullness", "dark_spots", "hyperpigmentation", "melasma"} & set(concerns):
+            return "brightening dark spot serum vitamin c niacinamide tranexamic azelaic"
+        if {"closed_comedones", "acne"} & set(concerns):
+            return "acne serum salicylic niacinamide azelaic"
+        return f"{concern_text} serum".strip() or "serum"
+
+    if product_form == "sunscreen":
+        return f"{concern_text} sunscreen spf".strip() or "sunscreen spf"
+
+    if product_form in {"cleanser", "toner", "moisturizer", "treatment"}:
+        return f"{concern_text} {product_form}".strip() or product_form
+
+    if intent == "routine_request" or product_form == "routine_bundle":
+        return f"{concern_text} skincare routine cleanser toner serum moisturizer sunscreen".strip()
+
+    return f"{concern_text} {message}".strip()
+
+
 def local_chat_response(
     message: str,
     conversation_history: Optional[List[Dict[str, str]]] = None,
@@ -717,7 +803,17 @@ def local_chat_response(
     wants_products = wants_product_recommendations(message)
     memory_updates = build_memory_updates(message, conversation_history)
 
-    if intent["ingredient_question"] and {"brightening", "dullness", "dark_spots", "hyperpigmentation"} & set(concerns + ["brightening" if "brighten" in text else ""]):
+    if any(term in text for term in ["wait between", "how long should i wait", "between skincare steps", "between steps", "layer skincare"]):
+        response = (
+            "You usually **do not need long wait times** between skincare steps.\n\n"
+            "- For most steps, wait about **30-60 seconds**, or until the product no longer feels very wet.\n"
+            "- Apply from thinnest to thickest: cleanser, toner/essence, serum, moisturizer, then sunscreen in the morning.\n"
+            "- Give **sunscreen** a few minutes to set before makeup or going outside.\n"
+            "- Wait longer only if a prescription label tells you to, if benzoyl peroxide needs to dry before clothing, or if layers are pilling.\n\n"
+            "The bigger goal is even application and comfort, not a strict timer."
+        )
+        wants_products = False
+    elif intent["ingredient_question"] and {"brightening", "dullness", "dark_spots", "hyperpigmentation"} & set(concerns + ["brightening" if "brighten" in text else ""]):
         response = (
             "For **brightening and uneven tone**, the most useful skincare ingredients are:\n\n"
             "- **Vitamin C:** best in the morning for antioxidant support, glow, and uneven tone.\n"
@@ -1075,13 +1171,16 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
 
     user_id = request.user_id or "anonymous"
     memory = get_user_memory(user_id)
-    current_concerns = infer_concerns(request.message)
-    concerns = current_concerns or infer_concerns(request.message, request.conversation_history)
-    intent = infer_chat_intent(request.message)
-    retrieved_knowledge = get_retrieved_knowledge(request.message, concerns)
-    product_query = product_query_for_message(request.message, concerns, intent)
-    condition = infer_chat_condition(" ".join(concerns) + " " + product_query)
-    should_preload_products = wants_product_recommendations(request.message)
+    nlu = get_nlu().classify(
+        request.message,
+        conversation_history=request.conversation_history,
+        skin_profile=request.skin_profile,
+    )
+    concerns = nlu.get("concerns") or ["general_skincare"]
+    retrieved_context = get_rag().context_text(request.message, nlu, top_k=5)
+    product_query = product_query_from_nlu(request.message, nlu)
+    condition = condition_from_nlu(nlu, product_query)
+    should_preload_products = bool(nlu.get("needs_products", False))
     retrieved_products = products_for_chat_message(product_query, condition, limit=12) if should_preload_products else []
 
     chatbot = get_chatbot()
@@ -1099,18 +1198,19 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             request.message,
             request.conversation_history,
             skin_profile=request.skin_profile,
-            retrieved_knowledge=retrieved_knowledge,
+            nlu=nlu,
+            retrieved_context=retrieved_context,
             product_context=retrieved_products,
             memory_context=memory_summary(memory),
         )
         product_names = response_data.get("recommended_products", [])
         product_query = response_data.get("product_query") or product_query
         model_wants_products = bool(response_data.get("wants_products", False))
-        should_show_products = model_wants_products or wants_product_recommendations(request.message)
+        should_show_products = model_wants_products or bool(nlu.get("needs_products", False))
 
         products = get_recommender().find_products_by_names(product_names) if product_names else []
         if should_show_products:
-            condition = infer_chat_condition(" ".join(concerns) + " " + product_query)
+            condition = condition_from_nlu(nlu, product_query)
             products = merge_products(
                 products,
                 products_for_chat_message(product_query, condition, limit=12),
@@ -1124,6 +1224,7 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             request.message,
             request.conversation_history,
         )
+        memory_updates = merge_memory_updates(memory_updates, nlu.get("memory_updates"))
         response_text = append_follow_up_questions(
             plain_chat_response_text(response_data.get("response_text", "")),
             response_data.get("followup_questions", []),
@@ -1134,6 +1235,7 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
                 "products": products,
                 "memory": updated_memory,
                 "memory_updates": memory_updates,
+                "nlu": nlu,
             }
         )
     except Exception as exc:

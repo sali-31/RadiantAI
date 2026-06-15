@@ -213,7 +213,14 @@ const cleanBotResponseContent = (value: unknown): string => {
         const nested = parsed.response_text || parsed.response;
         return typeof nested === 'string' && nested.trim() ? nested : value;
     } catch {
-        return value;
+        try {
+            const unescaped = trimmed.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            const parsed = JSON.parse(unescaped) as { response_text?: unknown; response?: unknown };
+            const nested = parsed.response_text || parsed.response;
+            return typeof nested === 'string' && nested.trim() ? nested : value;
+        } catch {
+            return value;
+        }
     }
 };
 

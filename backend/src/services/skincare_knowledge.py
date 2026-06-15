@@ -31,7 +31,7 @@ CONCERN_KEYWORDS = {
     "dry_skin": ["dry skin", "dry", "flaky", "dehydrated"],
     "oily_skin": ["oily skin", "oily", "shine", "sebum"],
     "sensitive_skin": ["sensitive skin", "sensitive", "stinging", "burning", "irritation"],
-    "redness": ["redness", "red", "rosacea", "flushing"],
+    "redness": ["redness", "red skin", "red face", "rosacea", "flushing"],
     "barrier_repair": ["barrier", "barrier repair", "damaged barrier", "skin barrier"],
 }
 

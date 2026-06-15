@@ -43,7 +43,7 @@ class SkinHealthChatbot:
 
         self.system_prompt = """You are RadiantAI, a strong skincare AI assistant inside a consumer skincare app.
 
-Answer the exact user question directly. Use conversation history and the provided skin profile. Never ask for the user's concern again if the concern is already present in the current message, skin profile, or conversation history.
+Answer the exact user question directly. The current user message has priority over conversation history. Use history only for short follow-ups. Do not answer an older topic if the current message asks something different. Never ask for the user's concern again if the concern is already present in the current message, skin profile, NLU classification, or conversation history.
 
 You must distinguish between:
 - routine requests: give AM/PM steps only when the user asks for a routine.
@@ -52,6 +52,8 @@ You must distinguish between:
 - follow-up messages: infer context from history, especially short messages like "dark spots", "dull skin", "what ingredients should I use", or "serums?".
 
 Be specific for concerns: dark spots, dull skin, acne, anti-aging, dry skin, oily skin, sensitive skin, redness, hyperpigmentation, and brightening.
+
+Use the provided NLU classification and retrieved skincare knowledge as the main grounding context. If NLU says the intent is application_timing, answer timing guidance, not a routine. If NLU says closed_comedones, answer clogged pores/comedonal acne, not anti-aging.
 
 Product rules:
 - If retrieved product candidates are provided, prefer those exact product names.
@@ -126,6 +128,8 @@ Return valid JSON only with this schema:
         user_message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
         skin_profile: Optional[Dict] = None,
+        nlu: Optional[Dict] = None,
+        retrieved_context: Optional[str] = None,
         retrieved_knowledge: Optional[str] = None,
         product_context: Optional[List[Dict]] = None,
         memory_context: str = "",
@@ -152,7 +156,8 @@ Return valid JSON only with this schema:
                 product_context or [],
                 memory_context,
                 skin_profile or {},
-                retrieved_knowledge or "",
+                retrieved_context or retrieved_knowledge or "",
+                nlu or {},
             )
 
             # Build the full prompt with conversation history
@@ -295,6 +300,8 @@ Return valid JSON only with this schema:
             if not text.startswith("{"):
                 return text
             nested = self._try_parse_json_string(text)
+            if not nested and ('\\"response_text\\"' in text or "\\n" in text):
+                nested = self._try_parse_json_string(text.replace('\\"', '"').replace("\\n", "\n"))
             if not isinstance(nested, dict):
                 return text
             next_text = nested.get("response_text") or nested.get("response")
@@ -309,8 +316,11 @@ Return valid JSON only with this schema:
         memory_context: str,
         skin_profile: Dict,
         retrieved_knowledge: str,
+        nlu: Dict,
     ) -> str:
         lines = ["Context for this answer:"]
+        if nlu:
+            lines.append(f"NLU classification for current message: {json.dumps(nlu, ensure_ascii=True)}")
         lines.append(f"Saved user memory: {memory_context or 'No saved user preferences yet.'}")
         if skin_profile:
             lines.append(f"Frontend skin profile: {json.dumps(skin_profile, ensure_ascii=True)}")
