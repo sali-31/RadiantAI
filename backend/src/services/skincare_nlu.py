@@ -178,6 +178,7 @@ Examples:
 - "How long should I wait between skincare steps?" => intent "application_timing", answer_type "timing", needs_products false
 - "ingredients for brightening" => intent "ingredient_question", needs_products false
 - "recommend serums for brightening" => intent "product_recommendation", product_form "serum", needs_products true
+- "I cannot tolerate niacinamide. What can I use for brightening instead?" => intent "ingredient_question", concerns ["brightening"], needs_products false, memory_updates.avoid ["niacinamide"]
 
 Current message: {message}
 Recent history, use only for short follow-ups: {recent_history or "none"}
@@ -294,7 +295,9 @@ Schema:
         if any(term in text for term in ["ingredient", "ingredients", "active", "actives", "what should i use"]):
             explicit_product = any(term in text for term in PRODUCT_REQUEST_TERMS) or bool(product_form)
             return "product_recommendation" if explicit_product and any(term in text for term in ["recommend", "product", "buy"]) else "ingredient_question"
-        if any(term in text for term in ["routine", "regimen", "morning", "night", "am", "pm"]):
+        if "what can i use" in text and any(term in text for term in ["instead", "alternative", "alternatives"]):
+            return "ingredient_question"
+        if any(term in text for term in ["routine", "regimen", "morning", "night"]) or re.search(r"\b(?:am|pm)\b", text):
             return "routine_request"
         if any(term in text for term in PRODUCT_REQUEST_TERMS) or product_form:
             return "product_recommendation"

@@ -122,6 +122,51 @@ class ChatIntelligenceTests(unittest.TestCase):
         self.assertIn("anua", updated["preferred_brands"])
         self.assertIn("cosrx", updated["preferred_brands"])
 
+    def test_brightening_advice_respects_niacinamide_intolerance(self):
+        result = main.local_chat_response(
+            "I cannot tolerate niacinamide. What can I use for brightening instead?"
+        )
+        response = result["response"].lower()
+
+        self.assertIn("skip niacinamide", response)
+        self.assertIn("tranexamic acid", response)
+        self.assertIn("alpha arbutin", response)
+        self.assertIn("azelaic acid", response)
+        self.assertIn("sunscreen", response)
+        self.assertLessEqual(response.count("niacinamide"), 2)
+        self.assertNotIn("vitamin c**, **niacinamide", response)
+        self.assertEqual(result["products"], [])
+
+    def test_nlu_memory_extracts_niacinamide_intolerance(self):
+        nlu = self.get_offline_nlu()
+        result = nlu.classify("I cannot tolerate niacinamide. What can I use for brightening instead?")
+
+        self.assertEqual(result["intent"], "ingredient_question")
+        self.assertFalse(result["needs_products"])
+        self.assertIn("brightening", result["concerns"])
+        self.assertIn("niacinamide", result["memory_updates"]["avoid"])
+
+    def test_acne_subtype_answers_are_specific_and_not_repeated(self):
+        blackheads = main.local_chat_response("What should I use for blackheads?")["response"].lower()
+        whiteheads = main.local_chat_response("What should I use for whiteheads?")["response"].lower()
+        forehead = main.local_chat_response("What helps tiny bumps on my forehead?")["response"].lower()
+
+        self.assertIn("blackheads", blackheads)
+        self.assertIn("salicylic acid", blackheads)
+        self.assertIn("bha", blackheads)
+
+        self.assertIn("whiteheads", whiteheads)
+        self.assertIn("closed comedones", whiteheads)
+        self.assertIn("adapalene", whiteheads)
+
+        self.assertIn("tiny bumps", forehead)
+        self.assertIn("forehead", forehead)
+        self.assertTrue("hair" in forehead or "folliculitis" in forehead)
+
+        self.assertNotEqual(blackheads, whiteheads)
+        self.assertNotEqual(blackheads, forehead)
+        self.assertNotEqual(whiteheads, forehead)
+
 
 if __name__ == "__main__":
     unittest.main()

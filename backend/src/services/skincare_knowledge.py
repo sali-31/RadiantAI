@@ -123,7 +123,9 @@ def infer_skin_type(message: str, conversation_history: Optional[List[Dict[str, 
 def infer_chat_intent(message: str) -> Dict[str, bool]:
     text = normalize_text(message)
     ingredient_question = any(term in text for term in INGREDIENT_TERMS)
-    routine_request = any(term in text for term in ROUTINE_TERMS)
+    routine_request = any(term in text for term in ROUTINE_TERMS if term not in {"am", "pm"}) or bool(
+        re.search(r"\b(?:am|pm)\b", text)
+    )
     product_request = any(term in text for term in PRODUCT_TERMS)
     serum_request = any(term in text for term in ["serum", "serums", "ampoule"])
     sunscreen_request = any(term in text for term in ["sunscreen", "spf", "sun cream", "sun serum"])
@@ -206,6 +208,40 @@ def build_memory_updates(
     avoid_match = re.search(r"avoid\s+([a-z0-9 ,+-]+)", text)
     if avoid_match:
         avoid.extend([item.strip() for item in re.split(r",| and | or ", avoid_match.group(1)) if item.strip()])
+    intolerance_match = re.search(
+        r"(?:cannot tolerate|can't tolerate|cant tolerate|can not tolerate|allergic to|sensitive to|react to|breaks me out)\s+([a-z0-9 ,+-]+)",
+        text,
+    )
+    if intolerance_match:
+        avoid.extend(
+            item.strip()
+            for item in re.split(r",| and | or ", intolerance_match.group(1))
+            if item.strip()
+        )
+    for ingredient in [
+        "niacinamide",
+        "vitamin c",
+        "retinol",
+        "retinoid",
+        "glycolic acid",
+        "salicylic acid",
+        "benzoyl peroxide",
+        "fragrance",
+    ]:
+        if ingredient in text and any(
+            phrase in text
+            for phrase in [
+                "cannot tolerate",
+                "can't tolerate",
+                "cant tolerate",
+                "can not tolerate",
+                "allergic",
+                "sensitive to",
+                "react to",
+                "breaks me out",
+            ]
+        ):
+            avoid.append(ingredient)
 
     return {
         "skin_type": skin_type,

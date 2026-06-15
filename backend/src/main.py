@@ -453,7 +453,9 @@ def wants_product_recommendations(message: str) -> bool:
     text = message.lower()
     is_ingredient_question = any(term in text for term in INGREDIENT_QUESTION_TERMS)
     explicit_product = any(term in text for term in PRODUCT_REQUEST_TERMS)
-    routine = any(term in text for term in ROUTINE_INTENT_TERMS)
+    routine = any(term in text for term in ROUTINE_INTENT_TERMS if term not in {"am", "pm"}) or bool(
+        re.search(r"\b(?:am|pm)\b", text)
+    )
     safety = any(
         term in text
         for term in [
@@ -479,7 +481,9 @@ def wants_product_recommendations(message: str) -> bool:
 
 def is_routine_request(message: str) -> bool:
     text = message.lower()
-    return any(term in text for term in ROUTINE_INTENT_TERMS)
+    return any(term in text for term in ROUTINE_INTENT_TERMS if term not in {"am", "pm"}) or bool(
+        re.search(r"\b(?:am|pm)\b", text)
+    )
 
 
 def expanded_query_tokens(query: str) -> List[str]:
@@ -806,6 +810,36 @@ def product_query_from_nlu(message: str, nlu: Dict[str, Any]) -> str:
     return f"{concern_text} {message}".strip()
 
 
+def avoid_terms_from_profile(skin_profile: Optional[Dict[str, Any]], memory_updates: Dict[str, Any]) -> List[str]:
+    avoid: List[str] = []
+    for source in [skin_profile or {}, memory_updates or {}]:
+        for key in ["avoid", "avoided_ingredients"]:
+            for value in source.get(key) or []:
+                clean = str(value).lower().strip()
+                if clean and clean not in avoid:
+                    avoid.append(clean)
+    return avoid
+
+
+def message_says_avoid(text: str, ingredient: str) -> bool:
+    if ingredient not in text:
+        return False
+    return any(
+        phrase in text
+        for phrase in [
+            "cannot tolerate",
+            "can't tolerate",
+            "cant tolerate",
+            "can not tolerate",
+            "allergic",
+            "sensitive to",
+            "react to",
+            "breaks me out",
+            "avoid",
+        ]
+    )
+
+
 def local_chat_response(
     message: str,
     conversation_history: Optional[List[Dict[str, str]]] = None,
@@ -833,6 +867,8 @@ def local_chat_response(
     condition = infer_chat_condition(" ".join(concerns) or message)
     wants_products = wants_product_recommendations(message)
     memory_updates = build_memory_updates(message, conversation_history)
+    avoid_terms = avoid_terms_from_profile(skin_profile, memory_updates)
+    avoid_niacinamide = message_says_avoid(text, "niacinamide") or "niacinamide" in avoid_terms
 
     if intent.get("safety_or_medical") or any(
         term in text
@@ -864,6 +900,22 @@ def local_chat_response(
             "- If symptoms are **painful, spreading, hot, swollen, pus-filled, blistering, scarring, or persistent**, contact a **doctor or dermatologist**. Seek urgent care for facial swelling, rapidly spreading redness/heat, or a painful one-sided blistering rash."
         )
         wants_products = False
+    elif avoid_niacinamide and any(
+        term in text
+        for term in ["brighten", "brightening", "glow", "dark spot", "dark spots", "hyperpigmentation", "dull"]
+    ):
+        response = (
+            "Yes - **skip niacinamide** if you know your skin does not tolerate it.\n\n"
+            "For brightening without relying on niacinamide, look at these options:\n\n"
+            "- **Vitamin C:** best for glow and antioxidant support, especially in the morning if your skin tolerates it.\n"
+            "- **Tranexamic acid:** a strong choice for dark spots, hyperpigmentation, and uneven pigment.\n"
+            "- **Alpha arbutin:** a gentle pigment-focused option for uneven tone.\n"
+            "- **Azelaic acid:** helpful for dark spots, post-acne marks, redness, and acne-prone skin.\n"
+            "- **Lactic acid or glycolic acid:** useful for dull surface texture, but start only **1-2 nights per week**.\n"
+            "- **Sunscreen SPF 30+:** the non-negotiable step, because brightening results fade if UV keeps triggering pigment.\n\n"
+            "If your skin is sensitive, I would start with azelaic acid or alpha arbutin, then add stronger actives slowly."
+        )
+        wants_products = wants_product_recommendations(message)
     elif any(term in text for term in ["wait between", "how long should i wait", "between skincare steps", "between steps", "layer skincare"]):
         response = (
             "You usually **do not need long wait times** between skincare steps.\n\n"
@@ -908,10 +960,11 @@ def local_chat_response(
             "Use one main treatment at a time and expect progress over weeks to months."
         )
     elif not intent["routine_request"] and ("dullness" in concerns or "skin concern is dull skin" in text):
+        glow_active = "**vitamin C**" if avoid_niacinamide else "**niacinamide** or **vitamin C**"
         response = (
-            "Got it — **dull skin** usually benefits from hydration, gentle exfoliation, and steady sun protection.\n\n"
+            "Got it - **dull skin** usually benefits from hydration, gentle exfoliation, and steady sun protection.\n\n"
             "- Start with a gentle cleanser so your skin does not feel stripped.\n"
-            "- Add **niacinamide** or **vitamin C** for glow and uneven tone.\n"
+            f"- Add {glow_active} for glow and uneven tone.\n"
             "- Use a gentle AHA, like lactic acid, **1-3 nights per week** if your skin tolerates exfoliation.\n"
             "- Keep a moisturizer in the routine so brightening ingredients do not dry you out.\n"
             "- Use **sunscreen every morning**; dullness and uneven tone improve much faster when UV exposure is controlled."
@@ -931,11 +984,16 @@ def local_chat_response(
             "Go slowly with retinoids, especially if your skin is dry or sensitive."
         )
     elif intent["routine_request"] and {"dark_spots", "hyperpigmentation", "brightening", "dullness"} & set(concerns):
+        morning_brighteners = (
+            "**vitamin C**, **tranexamic acid**, **alpha arbutin**, or **azelaic acid**"
+            if avoid_niacinamide
+            else "**vitamin C**, **niacinamide**, or **tranexamic acid**"
+        )
         response = (
             "Here is a **dark-spot/brightening routine**:\n\n"
             "**Morning**\n"
             "1. Gentle cleanser.\n"
-            "2. Brightening serum: **vitamin C**, **niacinamide**, or **tranexamic acid**.\n"
+            f"2. Brightening serum: {morning_brighteners}.\n"
             "3. Lightweight moisturizer.\n"
             "4. **Sunscreen SPF 30+** every morning; this is the most important step for dark spots.\n\n"
             "**Night**\n"
@@ -945,6 +1003,11 @@ def local_chat_response(
             "Avoid stacking too many actives on the same night. Progress usually takes weeks to months."
         )
     elif intent["routine_request"] and "acne" in concerns:
+        oil_balance_step = (
+            "Optional hydrating serum if your skin feels tight."
+            if avoid_niacinamide
+            else "Optional **niacinamide** to support oil balance and redness."
+        )
         acne_intro = (
             "Here is a **closed-comedone routine** for clogged pores and tiny under-the-skin bumps:\n\n"
             if any(term in text for term in ["closed comedone", "closed comedones", "comedone", "comedones", "tiny bumps", "clogged pore"])
@@ -954,7 +1017,7 @@ def local_chat_response(
             acne_intro +
             "**Morning**\n"
             "1. Gentle cleanser.\n"
-            "2. Optional **niacinamide** to support oil balance and redness.\n"
+            f"2. {oil_balance_step}\n"
             "3. Lightweight non-comedogenic moisturizer.\n"
             "4. **Sunscreen SPF 30+** every morning.\n\n"
             "**Night**\n"
@@ -977,6 +1040,36 @@ def local_chat_response(
             "3. Rich moisturizer; petrolatum can help seal very dry areas.\n\n"
             "Once your barrier feels calm, reintroduce actives slowly."
         )
+    elif not intent["routine_request"] and any(term in text for term in ["blackhead", "blackheads"]):
+        response = (
+            "**Blackheads** are open clogged pores, so the goal is to dissolve oil inside the pore without scrubbing your skin raw.\n\n"
+            "- Use a **salicylic acid/BHA leave-on** 2-3 nights per week to start.\n"
+            "- Keep the rest gentle: mild cleanser, lightweight non-comedogenic moisturizer, and sunscreen.\n"
+            "- Avoid harsh scrubs or squeezing; they can irritate the pore and make marks worse.\n"
+            "- If blackheads are stubborn, a slow-start **adapalene/retinoid** at night can help prevent new clogs.\n\n"
+            "Do not start BHA and a retinoid on the same night at first; alternate until your skin adjusts."
+        )
+        wants_products = wants_product_recommendations(message)
+    elif not intent["routine_request"] and any(term in text for term in ["whitehead", "whiteheads", "closed comedone", "closed comedones"]):
+        response = (
+            "**Whiteheads** are closed comedones, meaning oil and dead skin are trapped under the pore opening.\n\n"
+            "- Start with **salicylic acid/BHA** 2-3 nights per week for clogged pores.\n"
+            "- If they keep coming back, consider **adapalene** at night because retinoids help prevent comedones from forming.\n"
+            "- Use **benzoyl peroxide** mainly when bumps are red or inflamed, not as the only treatment for closed clogs.\n"
+            "- Keep a gentle cleanser, non-comedogenic moisturizer, and sunscreen so treatment does not damage your barrier.\n\n"
+            "Give comedonal acne several weeks; it usually improves gradually, not overnight."
+        )
+        wants_products = wants_product_recommendations(message)
+    elif not intent["routine_request"] and any(term in text for term in ["tiny bumps", "forehead bumps", "bumps on my forehead"]):
+        response = (
+            "**Tiny bumps on the forehead** are often closed comedones, but if they are very itchy and all look the same, folliculitis can also be possible.\n\n"
+            "- For clogged pores, try **salicylic acid/BHA** a few nights weekly or a slow-start **adapalene** routine.\n"
+            "- Avoid heavy hair oils, pomades, and thick leave-in products near the hairline.\n"
+            "- Keep cleanser and moisturizer gentle so you are treating clogs without causing irritation.\n"
+            "- If the bumps are itchy, spreading, painful, or not improving, a dermatologist can check whether it is acne or something else.\n\n"
+            "The key is to treat it like clogged pores first, but not force stronger acne products if the pattern does not fit."
+        )
+        wants_products = wants_product_recommendations(message)
     elif "acne" in concerns:
         response = (
             "For **acne**, match the active to the breakout type:\n\n"
