@@ -258,6 +258,29 @@ class ChatIntelligenceTests(unittest.TestCase):
         self.assertIn("removed_forbidden_ingredient_recommendation", validated["issues"])
         self.assertIn("removed_products_matching_avoid_terms", validated["issues"])
 
+    def test_pipeline_trace_names_backend_intelligence_stages(self):
+        nlu = self.get_offline_nlu().classify("Recommend a sunscreen without fragrance.")
+        response = main.smart_local_chat_response(
+            "Recommend a sunscreen without fragrance.",
+            "pipeline-test-user",
+            {},
+            debug_pipeline=True,
+            pipeline_context={
+                "nlu": nlu,
+                "retrieved_context": "Sunscreen guidance chunk",
+                "product_query": "sensitive skin sunscreen spf",
+                "condition": "sensitive_skin",
+                "preloaded_products": [{"title": "Example SPF", "category": "sunscreen"}],
+            },
+        )
+        pipeline = response["pipeline"]
+
+        self.assertEqual(pipeline["model_path"], "local_fallback")
+        self.assertIn("intent_concern_classifier", pipeline["architecture"])
+        self.assertIn("skincare_rag_retrieval", pipeline["architecture"])
+        self.assertIn("validator_repair", pipeline["architecture"])
+        self.assertIn("fragrance", pipeline["constraints"]["avoid"])
+
 
 if __name__ == "__main__":
     unittest.main()

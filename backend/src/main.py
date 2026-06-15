@@ -308,6 +308,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: Optional[List[Dict[str, str]]] = None
     skin_profile: Optional[Dict[str, Any]] = None
+    debug_pipeline: bool = False
 
 
 class ImageUrlRequest(BaseModel):
@@ -833,6 +834,50 @@ def merge_memory_updates(
                     values.append(clean)
         merged[key] = values
     return merged
+
+
+def build_pipeline_trace(
+    *,
+    user_id: str,
+    model_path: str,
+    nlu: Dict[str, Any],
+    retrieved_context: str,
+    product_query: str,
+    condition: str,
+    preloaded_products: List[Dict[str, Any]],
+    final_products: List[Dict[str, Any]],
+    validation: Dict[str, Any],
+    memory_updates: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Expose the assistant pipeline for debugging/evaluation without leaking prompts."""
+    return {
+        "architecture": [
+            "session_profile",
+            "constraint_extractor",
+            "intent_concern_classifier",
+            "skincare_rag_retrieval",
+            "answer_generation",
+            "product_recommender",
+            "validator_repair",
+            "memory_update",
+            "clean_response",
+        ],
+        "user_id": user_id,
+        "model_path": model_path,
+        "intent": nlu.get("intent"),
+        "answer_type": nlu.get("answer_type"),
+        "concerns": nlu.get("concerns") or [],
+        "product_form": nlu.get("product_form"),
+        "needs_products": bool(nlu.get("needs_products", False)),
+        "product_query": product_query,
+        "condition": condition,
+        "retrieved_context_chars": len(retrieved_context or ""),
+        "preloaded_product_count": len(preloaded_products),
+        "final_product_count": len(final_products),
+        "constraints": validation.get("constraints", {}),
+        "validation_issues": validation.get("issues", []),
+        "memory_updates": memory_updates,
+    }
 
 
 def product_query_for_message(message: str, concerns: List[str], intent: Dict[str, bool]) -> str:
@@ -1565,12 +1610,28 @@ def smart_local_chat_response(
     memory: Dict[str, Any],
     conversation_history: Optional[List[Dict[str, str]]] = None,
     skin_profile: Optional[Dict[str, Any]] = None,
+    debug_pipeline: bool = False,
+    pipeline_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     response = local_chat_response(message, conversation_history=conversation_history, skin_profile=skin_profile)
     products = response.get("products", [])
     updated_memory = update_user_memory(user_id, message, products)
     response["memory"] = updated_memory
     response["memory_updates"] = response.get("memory_updates") or build_memory_updates(message, conversation_history)
+    if debug_pipeline:
+        pipeline_context = pipeline_context or {}
+        response["pipeline"] = build_pipeline_trace(
+            user_id=user_id,
+            model_path="local_fallback",
+            nlu=pipeline_context.get("nlu") or {},
+            retrieved_context=pipeline_context.get("retrieved_context") or "",
+            product_query=pipeline_context.get("product_query") or message,
+            condition=pipeline_context.get("condition") or infer_chat_condition(message),
+            preloaded_products=pipeline_context.get("preloaded_products") or [],
+            final_products=products,
+            validation=response.get("validation") or {},
+            memory_updates=response["memory_updates"],
+        )
     return response
 
 
@@ -1786,6 +1847,13 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
     retrieved_products = products_for_chat_message(product_query, condition, limit=12) if should_preload_products else []
 
     chatbot = get_chatbot()
+    pipeline_context = {
+        "nlu": nlu,
+        "retrieved_context": retrieved_context,
+        "product_query": product_query,
+        "condition": condition,
+        "preloaded_products": retrieved_products,
+    }
     if chatbot is None:
         return smart_local_chat_response(
             request.message,
@@ -1793,6 +1861,8 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             memory,
             conversation_history=request.conversation_history,
             skin_profile=request.skin_profile,
+            debug_pipeline=request.debug_pipeline,
+            pipeline_context=pipeline_context,
         )
 
     try:
@@ -1839,22 +1909,35 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             nlu=nlu,
             memory_updates=memory_updates,
         )
-        return normalize_json(
-            {
-                "response": align_response_with_product_count(
-                    validated["response_text"],
-                    validated["products"],
-                ),
-                "products": validated["products"],
-                "memory": updated_memory,
-                "memory_updates": memory_updates,
-                "nlu": nlu,
-                "validation": {
-                    "issues": validated["issues"],
-                    "constraints": validated["constraints"],
-                },
-            }
-        )
+        validation_payload = {
+            "issues": validated["issues"],
+            "constraints": validated["constraints"],
+        }
+        payload = {
+            "response": align_response_with_product_count(
+                validated["response_text"],
+                validated["products"],
+            ),
+            "products": validated["products"],
+            "memory": updated_memory,
+            "memory_updates": memory_updates,
+            "nlu": nlu,
+            "validation": validation_payload,
+        }
+        if request.debug_pipeline:
+            payload["pipeline"] = build_pipeline_trace(
+                user_id=user_id,
+                model_path="gemini",
+                nlu=nlu,
+                retrieved_context=retrieved_context,
+                product_query=product_query,
+                condition=condition,
+                preloaded_products=retrieved_products,
+                final_products=validated["products"],
+                validation=validation_payload,
+                memory_updates=memory_updates,
+            )
+        return normalize_json(payload)
     except Exception as exc:
         logger.warning("Gemini chat failed; using local skincare fallback: %s", exc)
         return smart_local_chat_response(
@@ -1863,6 +1946,8 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             memory,
             conversation_history=request.conversation_history,
             skin_profile=request.skin_profile,
+            debug_pipeline=request.debug_pipeline,
+            pipeline_context=pipeline_context,
         )
 
 
