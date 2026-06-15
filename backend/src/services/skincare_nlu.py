@@ -299,7 +299,20 @@ Schema:
             return "ingredient_question"
         if any(term in text for term in ["routine", "regimen", "morning", "night"]) or re.search(r"\b(?:am|pm)\b", text):
             return "routine_request"
-        if any(term in text for term in PRODUCT_REQUEST_TERMS) or product_form:
+        informational_product_question = any(
+            term in text
+            for term in [
+                "how much sunscreen",
+                "how often should i reapply",
+                "do i need sunscreen",
+                "can i skip sunscreen",
+                "is spf",
+                "does tinted sunscreen",
+                "mineral vs chemical",
+            ]
+        )
+        form_question = bool(product_form) and any(term in text for term in ["recommend", "best", "should i use", "what sunscreen", "what cleanser", "what moisturizer", "what serum"])
+        if not informational_product_question and (any(term in text for term in PRODUCT_REQUEST_TERMS) or form_question):
             return "product_recommendation"
         if len(text.split()) <= 5:
             return "followup"

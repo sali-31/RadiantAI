@@ -167,6 +167,63 @@ class ChatIntelligenceTests(unittest.TestCase):
         self.assertNotEqual(blackheads, forehead)
         self.assertNotEqual(whiteheads, forehead)
 
+    def test_extended_constraint_answers_respect_avoidance(self):
+        no_vitamin_c = main.local_chat_response("I want a dark spot routine without vitamin C.")["response"].lower()
+        no_salicylic = main.local_chat_response("I cannot use salicylic acid. What helps blackheads instead?")["response"].lower()
+        no_retinol = main.local_chat_response("My skin reacts badly to retinol. What anti-aging ingredients can I use instead?")["response"].lower()
+        no_benzoyl = main.local_chat_response("I want an acne routine without benzoyl peroxide.")["response"].lower()
+
+        self.assertNotIn("brightening serum: **vitamin c", no_vitamin_c)
+        self.assertIn("tranexamic", no_vitamin_c)
+        self.assertIn("adapalene", no_salicylic)
+        self.assertNotIn("use a **salicylic acid", no_salicylic)
+        self.assertIn("peptides", no_retinol)
+        self.assertIn("sunscreen", no_retinol)
+        self.assertNotIn("retinoid 2-3 nights", no_retinol)
+        self.assertNotIn("use benzoyl peroxide", no_benzoyl)
+
+    def test_current_message_priority_and_no_product_intent(self):
+        timing = main.local_chat_response(
+            "Ignore my previous dark spot question. How long should I wait between skincare steps?",
+            conversation_history=[
+                {"role": "user", "content": "Give me products for dark spots"},
+                {"role": "assistant", "content": "Use a dark spot routine."},
+            ],
+        )
+        redness = main.local_chat_response("I no longer want product recommendations. Just explain ingredients for redness.")
+
+        self.assertIn("30-60 seconds", timing["response"])
+        self.assertEqual(timing["products"], [])
+        self.assertIn("azelaic acid", redness["response"].lower())
+        self.assertEqual(redness["products"], [])
+
+    def test_application_mixing_sunscreen_and_advanced_answers_are_specific(self):
+        mixing = main.local_chat_response("Can I use retinol and benzoyl peroxide together?")["response"].lower()
+        sunscreen = main.local_chat_response("How much sunscreen should I use on my face?")
+        pie_pih = main.local_chat_response("What is the difference between PIE and PIH acne marks?")["response"].lower()
+        pilling = main.local_chat_response("Why does my skincare pill under makeup?")["response"].lower()
+
+        self.assertIn("retinol + benzoyl peroxide", mixing)
+        self.assertIn("separate", mixing)
+        self.assertIn("two finger", sunscreen["response"].lower())
+        self.assertEqual(sunscreen["products"], [])
+        self.assertIn("post-inflammatory erythema", pie_pih)
+        self.assertIn("post-inflammatory hyperpigmentation", pie_pih)
+        self.assertIn("pilling", pilling)
+        self.assertNotIn("share your skin type", pilling)
+
+    def test_product_and_body_answers_are_specific(self):
+        moisturizer = main.local_chat_response("I am allergic to fragrance. Recommend a moisturizer.")
+        sunscreen = main.local_chat_response("Recommend only sunscreens for oily skin.")
+        back_acne = main.local_chat_response("What helps back acne?")["response"].lower()
+
+        self.assertIn("fragrance", moisturizer["response"].lower())
+        self.assertGreater(len(moisturizer["products"]), 0)
+        self.assertIn("sunscreen recommendations", sunscreen["response"].lower())
+        self.assertGreater(len(sunscreen["products"]), 0)
+        self.assertIn("body acne", back_acne)
+        self.assertIn("benzoyl peroxide wash", back_acne)
+
 
 if __name__ == "__main__":
     unittest.main()

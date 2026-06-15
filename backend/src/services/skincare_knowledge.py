@@ -126,9 +126,40 @@ def infer_chat_intent(message: str) -> Dict[str, bool]:
     routine_request = any(term in text for term in ROUTINE_TERMS if term not in {"am", "pm"}) or bool(
         re.search(r"\b(?:am|pm)\b", text)
     )
-    product_request = any(term in text for term in PRODUCT_TERMS)
     serum_request = any(term in text for term in ["serum", "serums", "ampoule"])
     sunscreen_request = any(term in text for term in ["sunscreen", "spf", "sun cream", "sun serum"])
+    form_request = any(term in text for term in PRODUCT_TERMS)
+    explicit_shopping = any(
+        term in text
+        for term in [
+            "recommend",
+            "recommendation",
+            "product",
+            "products",
+            "buy",
+            "affordable",
+            "under $",
+            "best cleanser",
+            "best moisturizer",
+            "best sunscreen",
+            "what cleanser should i use",
+            "what moisturizer should i use",
+            "what sunscreen should i use",
+        ]
+    )
+    informational_sunscreen = any(
+        term in text
+        for term in [
+            "how much sunscreen",
+            "how often",
+            "do i need sunscreen",
+            "can i skip sunscreen",
+            "is spf",
+            "does tinted sunscreen",
+            "mineral vs chemical",
+        ]
+    )
+    product_request = (explicit_shopping or (form_request and "should i use" in text)) and not informational_sunscreen
     safety_or_medical = any(term in text for term in SAFETY_TERMS)
     followup = len(text.split()) <= 5 and not routine_request
 
@@ -208,8 +239,11 @@ def build_memory_updates(
     avoid_match = re.search(r"avoid\s+([a-z0-9 ,+-]+)", text)
     if avoid_match:
         avoid.extend([item.strip() for item in re.split(r",| and | or ", avoid_match.group(1)) if item.strip()])
+    without_match = re.search(r"(?:without|no)\s+([a-z0-9 ,+-]+)", text)
+    if without_match:
+        avoid.extend([item.strip() for item in re.split(r",| and | or ", without_match.group(1)) if item.strip()])
     intolerance_match = re.search(
-        r"(?:cannot tolerate|can't tolerate|cant tolerate|can not tolerate|allergic to|sensitive to|react to|breaks me out)\s+([a-z0-9 ,+-]+)",
+        r"(?:cannot tolerate|cannot use|can't tolerate|can't use|cant tolerate|cant use|can not tolerate|can not use|allergic to|sensitive to|react to|reacts badly to|react badly to|breaks me out)\s+([a-z0-9 ,+-]+)",
         text,
     )
     if intolerance_match:
@@ -232,12 +266,18 @@ def build_memory_updates(
             phrase in text
             for phrase in [
                 "cannot tolerate",
+                "cannot use",
                 "can't tolerate",
+                "can't use",
                 "cant tolerate",
+                "cant use",
                 "can not tolerate",
+                "can not use",
                 "allergic",
                 "sensitive to",
                 "react to",
+                "reacts badly",
+                "react badly",
                 "breaks me out",
             ]
         ):
