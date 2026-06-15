@@ -17,6 +17,13 @@ from .services.live_catalog import products_for_step, search_live_catalog, searc
 from .services.memory import get_user_memory, memory_summary, update_user_memory
 from .services.privacy import scrub_image_metadata
 from .services.product_recommender import ProductRecommender
+from .services.skincare_knowledge import (
+    build_memory_updates,
+    get_retrieved_knowledge,
+    infer_chat_intent,
+    infer_concerns,
+    infer_skin_type,
+)
 from .services.storage import is_s3_configured, looks_like_s3_key, presigned_s3_url, upload_image_to_s3
 
 
@@ -73,40 +80,44 @@ STEP_CATEGORY_ALIASES = {
     "sunscreen": ["sunscreen"],
 }
 
-PRODUCT_INTENT_TERMS = [
+PRODUCT_REQUEST_TERMS = [
     "recommend",
     "recommendation",
     "product",
     "products",
-    "routine",
-    "regimen",
-    "steps",
-    "search",
     "buy",
-    "cleanser",
-    "toner",
-    "treatment",
     "serum",
     "serums",
+    "cleanser",
+    "toner",
     "moisturizer",
+    "cream",
     "sunscreen",
     "spf",
-    "kojic",
-    "azelaic",
-    "tranexamic",
-    "txa",
-    "arbutin",
-    "niacinamide",
-    "vitamin c",
-    "retinol",
-    "dark spot",
-    "dark spots",
-    "brightening",
-    "hyperpigmentation",
-    "melasma",
+    "ampoule",
+    "treatment",
 ]
 
-ROUTINE_INTENT_TERMS = ["routine", "regimen", "steps", "morning", "night", "every step"]
+ROUTINE_INTENT_TERMS = ["routine", "regimen", "steps", "morning", "night", "am", "pm"]
+
+INGREDIENT_QUESTION_TERMS = ["ingredient", "ingredients", "active", "actives", "what should i use"]
+
+CONCERN_TERMS = [
+    "brightening",
+    "dull",
+    "dullness",
+    "dark spot",
+    "dark spots",
+    "hyperpigmentation",
+    "melasma",
+    "anti aging",
+    "anti-aging",
+    "acne",
+    "dry",
+    "oily",
+    "sensitive",
+    "redness",
+]
 
 QUERY_STOPWORDS = {
     "good",
@@ -291,6 +302,7 @@ class ChatRequest(BaseModel):
     user_id: Optional[str] = None
     message: str
     conversation_history: Optional[List[Dict[str, str]]] = None
+    skin_profile: Optional[Dict[str, Any]] = None
 
 
 class ImageUrlRequest(BaseModel):
@@ -363,11 +375,13 @@ def infer_chat_condition(message: str) -> str:
         "hyperpigmentation": [
             "dark spot",
             "dark spots",
+            "dark_spots",
             "hyperpigmentation",
             "discoloration",
             "melasma",
             "kojic",
             "brightening",
+            "dullness",
             "tranexamic",
             "txa",
             "arbutin",
@@ -383,7 +397,13 @@ def infer_chat_condition(message: str) -> str:
 
 def wants_product_recommendations(message: str) -> bool:
     text = message.lower()
-    return any(term in text for term in PRODUCT_INTENT_TERMS)
+    is_ingredient_question = any(term in text for term in INGREDIENT_QUESTION_TERMS)
+    explicit_product = any(term in text for term in PRODUCT_REQUEST_TERMS)
+    routine = any(term in text for term in ROUTINE_INTENT_TERMS)
+
+    if is_ingredient_question and not explicit_product:
+        return False
+    return explicit_product or routine
 
 
 def is_routine_request(message: str) -> bool:
@@ -412,9 +432,41 @@ def requested_product_step(message: str) -> Optional[str]:
     return None
 
 
+def is_serum_request(message: str) -> bool:
+    return any(term in message.lower() for term in ["serum", "serums", "ampoule"])
+
+
+def is_sunscreen_request(message: str) -> bool:
+    return any(term in message.lower() for term in ["sunscreen", "spf", "sun cream", "sun serum"])
+
+
 def filter_by_requested_form(message: str, products: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     text = message.lower()
-    form_terms = ["serum", "serums", "cleanser", "toner", "moisturizer", "cream", "sunscreen", "spf"]
+    if is_serum_request(message):
+        preferred = [
+            product
+            for product in products
+            if any(
+                form in f"{product.get('title', '')} {product.get('name', '')} {product.get('category', '')}".lower()
+                for form in ["serum", "ampoule", "treatment"]
+            )
+        ]
+        if len(preferred) >= 2:
+            return preferred
+
+    if is_sunscreen_request(message):
+        preferred = [
+            product
+            for product in products
+            if any(
+                form in f"{product.get('title', '')} {product.get('name', '')} {product.get('category', '')}".lower()
+                for form in ["sunscreen", "spf", "sun cream", "sun serum", "sunstick"]
+            )
+        ]
+        if len(preferred) >= 2:
+            return preferred
+
+    form_terms = ["cleanser", "toner", "moisturizer", "cream"]
     requested_forms = [term.rstrip("s") for term in form_terms if term in text]
     if not requested_forms:
         return products
@@ -477,7 +529,7 @@ def search_local_product_catalog(query: str, condition: str, limit: int = 8) -> 
     return df.sort_values(sort_columns, ascending=ascending).head(limit).drop(columns=["_query_score"]).to_dict("records")
 
 
-def products_for_chat_message(message: str, condition: str, limit: int = 16) -> List[Dict[str, Any]]:
+def products_for_chat_message(message: str, condition: str, limit: int = 12) -> List[Dict[str, Any]]:
     step = None if is_routine_request(message) else requested_product_step(message)
     verified_products = filter_by_requested_form(
         message,
@@ -496,11 +548,12 @@ def products_for_chat_message(message: str, condition: str, limit: int = 16) -> 
     )
 
     if is_routine_request(message):
-        return merge_products(
+        routine_products = merge_products(
             build_step_recommendations(condition, query=message),
             query_products,
-            limit=limit,
+            limit=max(limit, 16),
         )
+        return balanced_routine_products(routine_products, limit=min(limit, 10))
 
     if len(query_products) >= 2:
         return query_products
@@ -510,6 +563,39 @@ def products_for_chat_message(message: str, condition: str, limit: int = 16) -> 
         build_step_recommendations(condition, query=message),
         limit=limit,
     )
+
+
+def balanced_routine_products(products: List[Dict[str, Any]], limit: int = 10) -> List[Dict[str, Any]]:
+    steps = ["cleanser", "toner", "treatment", "moisturizer", "sunscreen"]
+    by_step = {step: [] for step in steps}
+    extras = []
+    for product in products:
+        step = product.get("routine_step") or product.get("category")
+        if step in by_step:
+            by_step[step].append(product)
+        else:
+            extras.append(product)
+
+    balanced = []
+    for round_index in range(2):
+        for step in steps:
+            if len(balanced) >= limit:
+                return balanced
+            if len(by_step[step]) > round_index:
+                balanced.append(by_step[step][round_index])
+
+    for step in steps:
+        for product in by_step[step][2:]:
+            if len(balanced) >= limit:
+                return balanced
+            balanced.append(product)
+
+    for product in extras:
+        if len(balanced) >= limit:
+            return balanced
+        balanced.append(product)
+
+    return balanced
 
 
 def align_response_with_product_count(response_text: str, products: List[Dict[str, Any]]) -> str:
@@ -545,96 +631,188 @@ def product_names_from_context(products: List[Dict[str, Any]]) -> List[str]:
     return names
 
 
-def local_chat_response(message: str) -> Dict[str, Any]:
-    text = message.lower()
-    condition = infer_chat_condition(message)
-    wants_products = wants_product_recommendations(message)
-    product_keywords: List[str] = []
+def product_query_for_message(message: str, concerns: List[str], intent: Dict[str, bool]) -> str:
+    concern_text = " ".join(concerns).replace("_", " ")
+    if intent.get("serum_request"):
+        if {"brightening", "dullness", "dark_spots", "hyperpigmentation"} & set(concerns):
+            return "brightening dark spot serum vitamin c niacinamide tranexamic azelaic"
+        if "acne" in concerns:
+            return "acne serum salicylic niacinamide azelaic"
+        return f"{concern_text} serum".strip() or message
 
-    if any(word in text for word in ["routine", "regimen", "steps", "morning", "night"]):
+    if intent.get("sunscreen_request"):
+        return f"{concern_text} sunscreen spf".strip() or "sunscreen spf"
+
+    if intent.get("routine_request"):
+        return f"{concern_text} skincare routine cleanser toner serum moisturizer sunscreen".strip()
+
+    return message
+
+
+def local_chat_response(
+    message: str,
+    conversation_history: Optional[List[Dict[str, str]]] = None,
+    skin_profile: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    text = message.lower()
+    concerns = infer_concerns(message, conversation_history)
+    intent = infer_chat_intent(message)
+    skin_type = infer_skin_type(message, conversation_history) or (skin_profile or {}).get("skin_type")
+    condition = infer_chat_condition(" ".join(concerns) or message)
+    wants_products = wants_product_recommendations(message)
+    memory_updates = build_memory_updates(message, conversation_history)
+
+    if intent["ingredient_question"] and {"brightening", "dullness", "dark_spots", "hyperpigmentation"} & set(concerns + ["brightening" if "brighten" in text else ""]):
         response = (
-            "Here is a simple routine you can start with:\n\n"
-            "- Morning: gentle cleanser, lightweight moisturizer, then SPF 30+.\n"
-            "- Evening: cleanser, one targeted treatment, then moisturizer.\n"
-            "- Introduce actives slowly, about 2-3 nights per week at first, so you can watch for irritation.\n\n"
-            "If symptoms are painful, spreading, scarring, or not improving after several weeks, check in with a dermatologist."
+            "For **brightening and uneven tone**, the most useful skincare ingredients are:\n\n"
+            "- **Vitamin C:** best in the morning for antioxidant support, glow, and uneven tone.\n"
+            "- **Niacinamide:** beginner-friendly; supports the barrier, dullness, redness, and oil balance.\n"
+            "- **Tranexamic acid:** great for dark spots, hyperpigmentation, and melasma-style uneven pigment.\n"
+            "- **Alpha arbutin:** pigment-targeting and usually gentle.\n"
+            "- **Azelaic acid:** helpful if you have dark spots plus acne-prone skin or redness.\n"
+            "- **AHAs like lactic or glycolic acid:** help surface dullness and texture; use 1-3 nights per week.\n"
+            "- **Retinoids:** help texture, post-acne marks, and long-term tone; night only and introduce slowly.\n"
+            "- **Sunscreen:** non-negotiable every morning, because brightening work stalls if UV keeps pigment active."
         )
-        product_keywords = ["cleanser", "treatment", "moisturizer"]
-    elif any(
-        word in text
-        for word in [
-            "benzoyl",
-            "salicylic",
-            "retinol",
-            "adapalene",
-            "niacinamide",
-            "kojic",
-            "azelaic",
-            "tranexamic",
-            "arbutin",
-        ]
+    elif wants_products and intent["serum_request"] and {"brightening", "dullness", "dark_spots", "hyperpigmentation"} & set(concerns + ["brightening" if "brighten" in text else ""]):
+        response = (
+            "For **brightening serums**, choose the serum type based on the problem:\n\n"
+            "- **Vitamin C serum:** best for glow, dullness, and morning antioxidant support.\n"
+            "- **Tranexamic acid or alpha arbutin serum:** better for dark spots and uneven pigment.\n"
+            "- **Azelaic acid serum:** good if you also get acne, redness, or post-breakout marks.\n"
+            "- **Niacinamide serum:** the easiest beginner option for dullness, oil balance, redness, and barrier support.\n\n"
+            "Use one brightening serum at a time, then moisturizer. Keep sunscreen daily."
+        )
+    elif not intent["routine_request"] and (
+        "dark_spots" in concerns or "hyperpigmentation" in concerns or "dark spot" in text or "dark spots" in text
     ):
         response = (
-            "Those are useful active ingredients, but they work differently:\n\n"
-            "- Salicylic acid helps unclog pores and can be useful for blackheads or oily skin.\n"
-            "- Benzoyl peroxide targets acne-causing bacteria and inflamed breakouts.\n"
-            "- Adapalene supports cell turnover and is often useful for persistent acne.\n"
-            "- Niacinamide can help calm redness and support the skin barrier.\n\n"
-            "- Kojic acid, tranexamic acid, azelaic acid, and alpha arbutin are often used for dark spots or uneven tone.\n\n"
-            "Pick one strong active at a time, moisturize well, and use sunscreen during the day."
+            "For **dark spots and hyperpigmentation**, the goal is to slow new pigment and fade existing marks gradually.\n\n"
+            "- **Sunscreen every morning** is the anchor step; UV exposure keeps dark spots active.\n"
+            "- **Tranexamic acid** and **alpha arbutin** are strong pigment-focused options.\n"
+            "- **Azelaic acid** is useful when dark spots come with acne or redness.\n"
+            "- **Niacinamide** is a gentle supporting active for uneven tone and barrier health.\n"
+            "- A slow-start **retinoid** can help post-acne marks and texture over time.\n\n"
+            "Use one main treatment at a time and expect progress over weeks to months."
         )
-        product_keywords = ["kojic", "serum"] if "kojic" in text else ["salicylic", "benzoyl", "adapalene"]
-    elif any(word in text for word in ["dry", "irritated", "barrier", "sensitive", "burning"]):
+    elif not intent["routine_request"] and ("dullness" in concerns or "skin concern is dull skin" in text):
         response = (
-            "For dryness or irritation, simplify for a few days:\n\n"
-            "- Pause exfoliating acids, retinoids, and harsh scrubs.\n"
-            "- Use a gentle cleanser or just rinse with water in the morning.\n"
-            "- Apply a bland moisturizer with barrier-support ingredients like ceramides or glycerin.\n"
-            "- Use sunscreen, especially if your skin is inflamed or healing.\n\n"
-            "If burning, swelling, or a rash persists, it is worth getting medical advice."
+            "Got it — **dull skin** usually benefits from hydration, gentle exfoliation, and steady sun protection.\n\n"
+            "- Start with a gentle cleanser so your skin does not feel stripped.\n"
+            "- Add **niacinamide** or **vitamin C** for glow and uneven tone.\n"
+            "- Use a gentle AHA, like lactic acid, **1-3 nights per week** if your skin tolerates exfoliation.\n"
+            "- Keep a moisturizer in the routine so brightening ingredients do not dry you out.\n"
+            "- Use **sunscreen every morning**; dullness and uneven tone improve much faster when UV exposure is controlled."
         )
-        product_keywords = ["moisturizer", "cream", "gentle"]
-    elif any(word in text for word in ["dark", "spot", "hyperpigmentation", "marks", "scar"]):
+    elif intent["routine_request"] and ("anti_aging" in concerns or "anti aging" in text or "anti-aging" in text):
         response = (
-            "For dark spots or post-acne marks, consistency matters:\n\n"
-            "- Daily sunscreen is the most important step, because UV exposure can keep marks darker.\n"
-            "- Niacinamide, azelaic acid, vitamin C, or gentle retinoids may help brighten over time.\n"
-            "- Avoid picking at breakouts, since that can prolong discoloration.\n\n"
-            "Expect progress over weeks to months, not overnight."
+            "Here is an **anti-aging routine** that keeps the focus on prevention, texture, and barrier support:\n\n"
+            "**Morning**\n"
+            "1. Gentle cleanser or rinse.\n"
+            "2. Optional **vitamin C** for antioxidant support and glow.\n"
+            "3. Moisturizer with barrier-support ingredients.\n"
+            "4. **Broad-spectrum sunscreen** every day.\n\n"
+            "**Night**\n"
+            "1. Cleanser.\n"
+            "2. **Retinoid** 2-3 nights per week to start, then increase slowly.\n"
+            "3. Moisturizer; peptides are optional if you want extra firming support.\n\n"
+            "Go slowly with retinoids, especially if your skin is dry or sensitive."
         )
-        product_keywords = ["sunscreen", "niacinamide", "vitamin"]
+    elif intent["routine_request"] and {"dark_spots", "hyperpigmentation", "brightening", "dullness"} & set(concerns):
+        response = (
+            "Here is a **dark-spot/brightening routine**:\n\n"
+            "**Morning**\n"
+            "1. Gentle cleanser.\n"
+            "2. Brightening serum: **vitamin C**, **niacinamide**, or **tranexamic acid**.\n"
+            "3. Lightweight moisturizer.\n"
+            "4. **Sunscreen SPF 30+** every morning; this is the most important step for dark spots.\n\n"
+            "**Night**\n"
+            "1. Cleanser.\n"
+            "2. Treatment: **azelaic acid**, **alpha arbutin**, **tranexamic acid**, or a slow-start retinoid.\n"
+            "3. Moisturizer to protect the barrier.\n\n"
+            "Avoid stacking too many actives on the same night. Progress usually takes weeks to months."
+        )
+    elif intent["routine_request"] and "acne" in concerns:
+        response = (
+            "Here is an **acne-focused routine** that treats breakouts without stripping the skin:\n\n"
+            "**Morning**\n"
+            "1. Gentle cleanser.\n"
+            "2. Optional **niacinamide** to support oil balance and redness.\n"
+            "3. Lightweight non-comedogenic moisturizer.\n"
+            "4. **Sunscreen SPF 30+** every morning.\n\n"
+            "**Night**\n"
+            "1. Cleanser.\n"
+            "2. Treatment: **salicylic acid** for clogged pores, **benzoyl peroxide** for inflamed pimples, or **adapalene** for persistent acne.\n"
+            "3. Moisturizer to reduce dryness and irritation.\n\n"
+            "Start with one active at a time. If acne is painful, scarring, or spreading, check in with a dermatologist."
+        )
+    elif intent["routine_request"] and {"dry_skin", "sensitive_skin", "barrier_repair", "redness"} & set(concerns):
+        response = (
+            "Here is a **dry/sensitive barrier-support routine**:\n\n"
+            "**Morning**\n"
+            "1. Rinse or use a very gentle cleanser.\n"
+            "2. Hydrating layer with **glycerin** or **hyaluronic acid** if tolerated.\n"
+            "3. Moisturizer with **ceramides** or barrier-support ingredients.\n"
+            "4. Gentle **sunscreen** every morning.\n\n"
+            "**Night**\n"
+            "1. Gentle cleanser.\n"
+            "2. Skip acids/retinoids while stinging or burning is active.\n"
+            "3. Rich moisturizer; petrolatum can help seal very dry areas.\n\n"
+            "Once your barrier feels calm, reintroduce actives slowly."
+        )
+    elif "acne" in concerns:
+        response = (
+            "For **acne**, match the active to the breakout type:\n\n"
+            "- **Salicylic acid:** clogged pores, blackheads, oily skin.\n"
+            "- **Benzoyl peroxide:** inflamed pimples.\n"
+            "- **Adapalene/retinoids:** persistent acne and post-acne marks.\n"
+            "- Use a non-comedogenic moisturizer and sunscreen so treatment does not wreck your barrier.\n\n"
+            "If acne is painful, scarring, or not improving after several weeks, a dermatologist can help."
+        )
+    elif {"dry_skin", "sensitive_skin", "barrier_repair", "redness"} & set(concerns):
+        response = (
+            "For **dry, sensitive, or barrier-stressed skin**, simplify first:\n\n"
+            "- Use a gentle cleanser or just rinse in the morning.\n"
+            "- Look for **ceramides, glycerin, hyaluronic acid**, and, when needed, petrolatum-based occlusives.\n"
+            "- Pause exfoliating acids and retinoids if your skin stings or burns.\n"
+            "- Rebuild with moisturizer and sunscreen before adding strong treatments back."
+        )
     else:
         response = (
-            "I can help with skincare routines, ingredients, and product ideas. A good baseline is: "
-            "cleanse gently, treat one concern at a time, moisturize, and use sunscreen every morning. "
-            "Tell me your main concern, like acne, dryness, redness, oily skin, or dark spots, and I can tailor the advice."
+            "A good baseline is: cleanse gently, treat one concern at a time, moisturize, and use sunscreen every morning. "
+            "If you share your skin type, main concern, and whether you want ingredients, a routine, or product recommendations, I can tailor it."
         )
 
-    products = products_for_chat_message(message, condition) if wants_products else []
+    product_query = product_query_for_message(message, concerns, intent)
+    products = products_for_chat_message(product_query, condition, limit=12) if wants_products else []
     if wants_products:
         products = merge_products(
             products,
-            search_local_product_catalog(message, condition, limit=8),
-            limit=16,
+            search_local_product_catalog(product_query, condition, limit=8),
+            limit=12,
         )
-    if not products and product_keywords:
-        products = get_recommender().recommend_for_condition(
-            condition,
-            budget_max=None,
-            top_n=5,
-            keywords=product_keywords,
-        )
-        if not products:
-            products = get_recommender().recommend_for_condition(condition, top_n=5)
 
-    return normalize_json({"response": align_response_with_product_count(response, products), "products": products})
+    return normalize_json(
+        {
+            "response": align_response_with_product_count(response, products),
+            "products": products,
+            "memory_updates": memory_updates,
+        }
+    )
 
 
-def smart_local_chat_response(message: str, user_id: str, memory: Dict[str, Any]) -> Dict[str, Any]:
-    response = local_chat_response(message)
+def smart_local_chat_response(
+    message: str,
+    user_id: str,
+    memory: Dict[str, Any],
+    conversation_history: Optional[List[Dict[str, str]]] = None,
+    skin_profile: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    response = local_chat_response(message, conversation_history=conversation_history, skin_profile=skin_profile)
     products = response.get("products", [])
     updated_memory = update_user_memory(user_id, message, products)
     response["memory"] = updated_memory
+    response["memory_updates"] = response.get("memory_updates") or build_memory_updates(message, conversation_history)
     return response
 
 
@@ -837,47 +1015,75 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
 
     user_id = request.user_id or "anonymous"
     memory = get_user_memory(user_id)
-    condition = infer_chat_condition(request.message)
-    wants_products = wants_product_recommendations(request.message)
-    retrieved_products = products_for_chat_message(request.message, condition) if wants_products else []
+    concerns = infer_concerns(request.message, request.conversation_history)
+    intent = infer_chat_intent(request.message)
+    retrieved_knowledge = get_retrieved_knowledge(request.message, concerns)
+    product_query = product_query_for_message(request.message, concerns, intent)
+    condition = infer_chat_condition(" ".join(concerns) + " " + product_query)
+    should_preload_products = wants_product_recommendations(request.message)
+    retrieved_products = products_for_chat_message(product_query, condition, limit=12) if should_preload_products else []
 
     chatbot = get_chatbot()
     if chatbot is None:
-        return smart_local_chat_response(request.message, user_id, memory)
+        return smart_local_chat_response(
+            request.message,
+            user_id,
+            memory,
+            conversation_history=request.conversation_history,
+            skin_profile=request.skin_profile,
+        )
 
     try:
         response_data = chatbot.chat(
             request.message,
             request.conversation_history,
+            skin_profile=request.skin_profile,
+            retrieved_knowledge=retrieved_knowledge,
             product_context=retrieved_products,
             memory_context=memory_summary(memory),
         )
         product_names = response_data.get("recommended_products", [])
+        product_query = response_data.get("product_query") or product_query
+        model_wants_products = bool(response_data.get("wants_products", False))
+        should_show_products = model_wants_products or wants_product_recommendations(request.message)
+
         products = get_recommender().find_products_by_names(product_names) if product_names else []
-        if wants_products:
+        if should_show_products:
+            condition = infer_chat_condition(" ".join(concerns) + " " + product_query)
             products = merge_products(
                 products,
-                retrieved_products,
-                limit=16,
+                products_for_chat_message(product_query, condition, limit=12),
+                limit=12,
             )
-        if wants_products and not response_data.get("recommended_products"):
+        if should_show_products and not response_data.get("recommended_products"):
             response_data["recommended_products"] = product_names_from_context(products)
 
         updated_memory = update_user_memory(user_id, request.message, products)
+        memory_updates = response_data.get("memory_updates") or build_memory_updates(
+            request.message,
+            request.conversation_history,
+        )
         response_text = append_follow_up_questions(
             response_data.get("response_text", ""),
-            response_data.get("follow_up_questions", []),
+            response_data.get("followup_questions", []),
         )
         return normalize_json(
             {
                 "response": align_response_with_product_count(response_text, products),
                 "products": products,
                 "memory": updated_memory,
+                "memory_updates": memory_updates,
             }
         )
     except Exception as exc:
         logger.warning("Gemini chat failed; using local skincare fallback: %s", exc)
-        return smart_local_chat_response(request.message, user_id, memory)
+        return smart_local_chat_response(
+            request.message,
+            user_id,
+            memory,
+            conversation_history=request.conversation_history,
+            skin_profile=request.skin_profile,
+        )
 
 
 @app.post("/api/image-url")

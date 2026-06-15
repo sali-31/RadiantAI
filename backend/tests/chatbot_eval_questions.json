@@ -1,0 +1,35 @@
+[
+  {
+    "input": "skincare ingredients for brightening",
+    "expected": ["vitamin C", "niacinamide", "tranexamic", "azelaic", "sunscreen"],
+    "should_not_include": ["Tell me your main concern"]
+  },
+  {
+    "input": "give me serum recommendations for brightening",
+    "expected": ["serum", "brightening", "vitamin C", "niacinamide"],
+    "products_expected": true
+  },
+  {
+    "input": "skin concern is dull skin",
+    "expected": ["dull", "hydration", "exfoliation", "sunscreen"],
+    "should_not_include": ["Tell me your main concern"]
+  },
+  {
+    "history": [
+      {"role": "user", "content": "skin concern is dull skin"},
+      {"role": "assistant", "content": "For dull skin..."}
+    ],
+    "input": "what ingredients should I use?",
+    "expected": ["dull", "vitamin C", "niacinamide", "sunscreen"]
+  },
+  {
+    "input": "skincare routine for dark spots",
+    "expected": ["morning", "night", "sunscreen", "dark spots"],
+    "should_not_be_same_as": "skincare routine for anti aging"
+  },
+  {
+    "input": "skincare routine for anti aging",
+    "expected": ["retinoid", "sunscreen", "moisturizer", "night"],
+    "should_not_be_same_as": "skincare routine for dark spots"
+  }
+]

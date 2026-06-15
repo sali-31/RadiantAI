@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ProductCard } from './RecommendedProducts';
 import type { Product } from '../types';
 
@@ -32,6 +33,22 @@ interface StoredChatThread extends Omit<ChatThread, 'createdAt' | 'updatedAt' | 
     messages: StoredMessage[];
 }
 
+interface SkinProfile {
+    skin_type: string | null;
+    concerns: string[];
+    goals: string[];
+    preferences: string[];
+    avoid: string[];
+}
+
+interface MemoryUpdates {
+    skin_type?: string | null;
+    concerns?: string[];
+    goals?: string[];
+    preferences?: string[];
+    avoid?: string[];
+}
+
 const createWelcomeMessage = (): Message => ({
     id: 'welcome',
     type: 'bot',
@@ -42,6 +59,15 @@ const createWelcomeMessage = (): Message => ({
 const getLegacyStorageKey = (userId: string) => `radiantai_chat_messages_${userId || 'anonymous'}`;
 const getThreadsStorageKey = (userId: string) => `radiantai_chat_threads_${userId || 'anonymous'}`;
 const getActiveThreadStorageKey = (userId: string) => `radiantai_active_chat_thread_${userId || 'anonymous'}`;
+const getSkinProfileStorageKey = (userId: string) => `radiantai_skin_profile_${userId || 'anonymous'}`;
+
+const defaultSkinProfile: SkinProfile = {
+    skin_type: null,
+    concerns: [],
+    goals: [],
+    preferences: [],
+    avoid: [],
+};
 
 const createEmptyThread = (): ChatThread => {
     const now = new Date();
@@ -132,11 +158,52 @@ const getInitialActiveThreadId = (userId: string, threads: ChatThread[]) => {
     return threads[0].id;
 };
 
+const uniqueMerge = (current: string[], incoming?: string[]) => {
+    const next = [...current];
+    (incoming || []).forEach(value => {
+        const normalized = String(value || '').trim();
+        if (normalized && !next.includes(normalized)) {
+            next.push(normalized);
+        }
+    });
+    return next;
+};
+
+const loadSkinProfile = (userId: string): SkinProfile => {
+    try {
+        const saved = localStorage.getItem(getSkinProfileStorageKey(userId));
+        if (!saved) return defaultSkinProfile;
+        const parsed = JSON.parse(saved) as Partial<SkinProfile>;
+        return {
+            skin_type: parsed.skin_type || null,
+            concerns: Array.isArray(parsed.concerns) ? parsed.concerns : [],
+            goals: Array.isArray(parsed.goals) ? parsed.goals : [],
+            preferences: Array.isArray(parsed.preferences) ? parsed.preferences : [],
+            avoid: Array.isArray(parsed.avoid) ? parsed.avoid : [],
+        };
+    } catch (error) {
+        console.error('Failed to load skin profile:', error);
+        return defaultSkinProfile;
+    }
+};
+
+const mergeSkinProfile = (profile: SkinProfile, updates?: MemoryUpdates): SkinProfile => {
+    if (!updates) return profile;
+    return {
+        skin_type: updates.skin_type || profile.skin_type,
+        concerns: uniqueMerge(profile.concerns, updates.concerns),
+        goals: uniqueMerge(profile.goals, updates.goals),
+        preferences: uniqueMerge(profile.preferences, updates.preferences),
+        avoid: uniqueMerge(profile.avoid, updates.avoid),
+    };
+};
+
 export const Chatbot: React.FC<Props> = ({ userId }) => {
     const [threads, setThreads] = useState<ChatThread[]>(() => loadThreads(userId));
     const [activeThreadId, setActiveThreadId] = useState(() => getInitialActiveThreadId(userId, loadThreads(userId)));
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [skinProfile, setSkinProfile] = useState<SkinProfile>(() => loadSkinProfile(userId));
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const activeThread = useMemo(
         () => threads.find(thread => thread.id === activeThreadId) || threads[0],
@@ -159,6 +226,7 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
         const loadedThreads = loadThreads(userId);
         setThreads(loadedThreads);
         setActiveThreadId(getInitialActiveThreadId(userId, loadedThreads));
+        setSkinProfile(loadSkinProfile(userId));
         setInput('');
         setLoading(false);
     }, [userId]);
@@ -172,6 +240,14 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
             console.error('Failed to save chat history:', error);
         }
     }, [activeThreadId, threads, userId]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(getSkinProfileStorageKey(userId), JSON.stringify(skinProfile));
+        } catch (error) {
+            console.error('Failed to save skin profile:', error);
+        }
+    }, [skinProfile, userId]);
 
     const updateActiveMessages = (updater: (current: Message[]) => Message[]) => {
         setThreads(prevThreads => prevThreads.map(thread => {
@@ -227,10 +303,13 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
             timestamp: new Date(),
         };
 
-        const conversationHistory = messages.map(m => ({
-            role: m.type === 'user' ? 'user' : 'assistant',
-            content: m.content,
-        }));
+        const conversationHistory = messages
+            .filter(m => m.id !== 'welcome' && m.content.trim())
+            .slice(-12)
+            .map(m => ({
+                role: m.type === 'user' ? 'user' : 'assistant',
+                content: m.content,
+            }));
 
         updateActiveMessages(prev => [...prev, userMessage]);
         setInput('');
@@ -257,6 +336,7 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
                     user_id: userId,
                     message: input,
                     conversation_history: conversationHistory,
+                    skin_profile: skinProfile,
                 }),
             });
 
@@ -269,6 +349,10 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
 
             const data = await response.json();
             console.log('✅ Response Data:', data);
+
+            if (data.memory_updates) {
+                setSkinProfile(prevProfile => mergeSkinProfile(prevProfile, data.memory_updates));
+            }
             
             const botMessage: Message = {
                 id: (Date.now() + 1).toString(),
@@ -380,7 +464,13 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
                                         : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
                                 }`}
                             >
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                                <div className={`text-sm leading-relaxed max-w-none ${
+                                    message.type === 'user'
+                                        ? '[&_a]:text-white [&_ul]:list-disc [&_ol]:list-decimal [&_li]:ml-4 [&_p]:my-1 [&_strong]:font-semibold'
+                                        : 'text-gray-800 [&_a]:text-blue-600 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:ml-4 [&_p]:my-1 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-base [&_h3]:text-sm [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-bold'
+                                }`}>
+                                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                                </div>
                                 
                                 {/* Render Product Cards if available */}
                                 {message.products && message.products.length > 0 && (

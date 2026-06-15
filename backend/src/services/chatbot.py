@@ -23,38 +23,69 @@ class SkinHealthChatbot:
         
         
         genai.configure(api_key=api_key)
-        # Updated to use a supported model
-        self.model = genai.GenerativeModel("gemini-2.5-flash")
-        
-        self.system_prompt = """You are RadiantAI, a careful skincare advisor for a consumer skincare app.
+        generation_config = {
+            "temperature": 0.35,
+            "top_p": 0.9,
+            "max_output_tokens": 1200,
+            "response_mime_type": "application/json",
+        }
+        try:
+            self.model = genai.GenerativeModel(
+                os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+                generation_config=generation_config,
+            )
+        except TypeError:
+            generation_config.pop("response_mime_type", None)
+            self.model = genai.GenerativeModel(
+                os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+                generation_config=generation_config,
+            )
 
-            Your job:
-            - Give practical skincare guidance in clear language.
-            - Use the provided user memory when it is relevant.
-            - Use the provided product catalog context as the source of truth for product recommendations.
-            - Prefer products from Sephora, StyleKorean, popular Korean brands, and the local verified/Amazon catalog when provided.
-            - Ask 1-3 focused follow-up questions only when the answer would be unsafe or too vague without them.
+        self.system_prompt = """You are RadiantAI, a strong skincare AI assistant inside a consumer skincare app.
 
-            Safety and quality rules:
-            1. Do not diagnose. Say when a dermatologist is needed for painful, spreading, infected, severe, scarring, or persistent symptoms.
-            2. Avoid weak generic answers. If products are requested, give concrete product/routine guidance.
-            3. Respect allergies, sensitivities, budget, skin type, and avoided ingredients from memory.
-            4. Never invent retailer links, prices, ratings, or product availability.
-            5. If catalog products are provided, recommend only those catalog products by exact name.
-            6. If the user asks for a routine, cover cleanser, toner, treatment, moisturizer, and sunscreen.
-            7. For routines, include at least 2 product options for each step when the catalog context supports it.
-            8. Keep active ingredients realistic: introduce strong actives slowly and remind users to use SPF with brightening acids or retinoids.
-            9. Do not reveal internal reasoning, drafting notes, uncertainty narration, or self-corrections.
-            10. Never write phrases like "self-correction", "let me re-evaluate", "I should", or "try again".
+Answer the exact user question directly. Use conversation history and the provided skin profile. Never ask for the user's concern again if the concern is already present in the current message, skin profile, or conversation history.
 
-            Return valid JSON only:
-            {
-                "response_text": "Concise Markdown answer. Use headings or bullets when helpful.",
-                "recommended_products": ["Exact Product Name 1", "Exact Product Name 2"],
-                "follow_up_questions": ["Question 1"],
-                "remembered_facts": {"skin_type": "", "budget_max": null, "concerns": [], "allergies": [], "preferred_brands": []}
-            }
-            """
+You must distinguish between:
+- routine requests: give AM/PM steps only when the user asks for a routine.
+- ingredient questions: explain useful ingredients and how/when to use them. Do not force product cards.
+- product recommendation requests: explain product-type logic and return clear searchable product names.
+- follow-up messages: infer context from history, especially short messages like "dark spots", "dull skin", "what ingredients should I use", or "serums?".
+
+Be specific for concerns: dark spots, dull skin, acne, anti-aging, dry skin, oily skin, sensitive skin, redness, hyperpigmentation, and brightening.
+
+Product rules:
+- If retrieved product candidates are provided, prefer those exact product names.
+- Never invent retailer links, prices, or availability.
+- For serum requests, prefer serum/ampoule/treatment products.
+- For sunscreen requests, prefer SPF/sunscreen products.
+- For routine requests, include cleanser, treatment/serum, moisturizer, sunscreen, and toner when useful.
+
+Safety:
+- Mention red flags briefly: painful, spreading, infected, severe, scarring, or persistent symptoms should be checked by a dermatologist.
+- Do not overdo medical disclaimers.
+
+Style:
+- Be context-aware, specific, non-repetitive, and concise.
+- Avoid generic "tell me your concern" responses when a concern exists.
+- Do not reveal internal reasoning, drafting notes, uncertainty narration, or self-corrections.
+
+Return valid JSON only with this schema:
+{
+  "response_text": "Markdown answer for the user.",
+  "recommended_products": ["clear searchable product name 1", "clear searchable product name 2"],
+  "product_query": "short optimized search query for the product engine",
+  "wants_products": true,
+  "needs_followup": false,
+  "followup_questions": [],
+  "memory_updates": {
+    "skin_type": null,
+    "concerns": [],
+    "goals": [],
+    "preferences": [],
+    "avoid": []
+  }
+}
+"""
         
     def _sanitize_input(self, text: str) -> tuple[bool, str]:
         """
@@ -93,6 +124,8 @@ class SkinHealthChatbot:
         self,
         user_message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
+        skin_profile: Optional[Dict] = None,
+        retrieved_knowledge: Optional[str] = None,
         product_context: Optional[List[Dict]] = None,
         memory_context: str = "",
     ) -> Dict:
@@ -114,7 +147,12 @@ class SkinHealthChatbot:
                 logger.warning(f"Security Alert: Potential malicious code injection detected in \n{user_message}")
                 return "I apologize, but I cannot process that request."
             
-            context_block = self._build_context_block(product_context or [], memory_context)
+            context_block = self._build_context_block(
+                product_context or [],
+                memory_context,
+                skin_profile or {},
+                retrieved_knowledge or "",
+            )
 
             # Build the full prompt with conversation history
             if conversation_history:
@@ -155,9 +193,7 @@ class SkinHealthChatbot:
             response_data["response_text"] = self._remove_internal_notes(
                 str(response_data.get("response_text", ""))
             )
-            response_data.setdefault("recommended_products", [])
-            response_data.setdefault("follow_up_questions", [])
-            response_data.setdefault("remembered_facts", {})
+            response_data = self._normalize_response(response_data)
             
             logger.info(f"Chat response generated successfully")
             return response_data
@@ -178,9 +214,44 @@ class SkinHealthChatbot:
             cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
         return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
-    def _build_context_block(self, product_context: List[Dict], memory_context: str) -> str:
+    def _normalize_response(self, response_data: Dict) -> Dict:
+        memory_updates = response_data.get("memory_updates") or {}
+        if not isinstance(memory_updates, dict):
+            memory_updates = {}
+        normalized_memory = {
+            "skin_type": memory_updates.get("skin_type"),
+            "concerns": list(memory_updates.get("concerns") or []),
+            "goals": list(memory_updates.get("goals") or []),
+            "preferences": list(memory_updates.get("preferences") or []),
+            "avoid": list(memory_updates.get("avoid") or []),
+        }
+        return {
+            "response_text": str(response_data.get("response_text", "")).strip(),
+            "recommended_products": list(response_data.get("recommended_products") or []),
+            "product_query": str(response_data.get("product_query") or "").strip(),
+            "wants_products": bool(response_data.get("wants_products", False)),
+            "needs_followup": bool(response_data.get("needs_followup", False)),
+            "followup_questions": list(
+                response_data.get("followup_questions")
+                or response_data.get("follow_up_questions")
+                or []
+            ),
+            "memory_updates": normalized_memory,
+        }
+
+    def _build_context_block(
+        self,
+        product_context: List[Dict],
+        memory_context: str,
+        skin_profile: Dict,
+        retrieved_knowledge: str,
+    ) -> str:
         lines = ["Context for this answer:"]
         lines.append(f"Saved user memory: {memory_context or 'No saved user preferences yet.'}")
+        if skin_profile:
+            lines.append(f"Frontend skin profile: {json.dumps(skin_profile, ensure_ascii=True)}")
+        if retrieved_knowledge:
+            lines.append(f"Retrieved skincare knowledge:\n{retrieved_knowledge}")
 
         if product_context:
             lines.append("Retrieved product catalog candidates. Use exact names only if recommending products:")
@@ -201,10 +272,16 @@ class SkinHealthChatbot:
     def _build_messages_from_history(self, conversation_history: List[Dict[str, str]]) -> List[str]:
         """Convert conversation history to message format"""
         messages = [self.system_prompt]
-        
-        for msg in conversation_history[-5:]:  # Keep last 5 messages for context
+        messages.append(
+            "Use conversation history to infer context. If the user gave a concern, goal, skin type, budget, or product preference earlier, carry it forward. Short follow-ups like \"dark spots\", \"dull skin\", \"what ingredients should I use\", or \"serums?\" must be interpreted using prior context."
+        )
+
+        for msg in conversation_history[-12:]:
             role = msg.get("role", "user")
-            content = msg.get("content", "")
+            content = str(msg.get("content", "")).strip()
+            content = content.split("Recommended Products")[0].strip()
+            if not content:
+                continue
             if role == "user":
                 messages.append(f"User: {content}")
             else:
