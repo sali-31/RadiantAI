@@ -8,6 +8,7 @@ os.environ["ENABLE_LIVE_PRODUCT_SEARCH"] = "false"
 
 from backend.src import main  # noqa: E402
 from backend.src.services import memory as memory_service  # noqa: E402
+from backend.src.services.chatbot_validator import validate_chat_response  # noqa: E402
 from backend.src.services.skincare_nlu import SkincareNLU  # noqa: E402
 from backend.src.services.skincare_rag import SkincareRAG  # noqa: E402
 
@@ -223,6 +224,39 @@ class ChatIntelligenceTests(unittest.TestCase):
         self.assertGreater(len(sunscreen["products"]), 0)
         self.assertIn("body acne", back_acne)
         self.assertIn("benzoyl peroxide wash", back_acne)
+
+    def test_validator_unwraps_json_and_removes_unrequested_products(self):
+        validated = validate_chat_response(
+            message="How much sunscreen should I use?",
+            response_text='{"response_text": "Use two finger lengths of sunscreen."}',
+            products=[{"title": "Random Sunscreen SPF 50", "category": "sunscreen"}],
+            nlu={"intent": "general_question", "needs_products": False},
+        )
+
+        self.assertEqual(validated["response_text"], "Use two finger lengths of sunscreen.")
+        self.assertEqual(validated["products"], [])
+        self.assertIn("unwrapped_raw_json", validated["issues"])
+        self.assertIn("removed_unrequested_products", validated["issues"])
+
+    def test_validator_enforces_avoid_terms_in_text_and_products(self):
+        validated = validate_chat_response(
+            message="I cannot tolerate niacinamide. Recommend brightening products.",
+            response_text="Use niacinamide serum for brightening. Use tranexamic acid instead.",
+            products=[
+                {"title": "Brightening Niacinamide Serum", "category": "serum"},
+                {"title": "Tranexamic Acid Serum", "category": "serum"},
+            ],
+            nlu={"intent": "product_recommendation", "needs_products": True},
+            memory_updates={"avoid": ["niacinamide"]},
+        )
+
+        response = validated["response_text"].lower()
+        product_text = " ".join(product["title"].lower() for product in validated["products"])
+        self.assertNotIn("use niacinamide serum", response)
+        self.assertIn("tranexamic acid", response)
+        self.assertNotIn("niacinamide", product_text)
+        self.assertIn("removed_forbidden_ingredient_recommendation", validated["issues"])
+        self.assertIn("removed_products_matching_avoid_terms", validated["issues"])
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from .services.analysis import perform_ensemble_analysis
 from .services.chatbot import SkinHealthChatbot
+from .services.chatbot_validator import validate_chat_response
 from .services.live_catalog import products_for_step, search_live_catalog, search_verified_catalog
 from .services.memory import get_user_memory, memory_summary, update_user_memory
 from .services.privacy import scrub_image_metadata
@@ -1519,11 +1520,41 @@ def local_chat_response(
         )
         products = filter_products_by_avoid_terms(products, avoid_terms)
 
+    validated = validate_chat_response(
+        message=message,
+        response_text=response,
+        products=products,
+        skin_profile=skin_profile,
+        nlu={
+            "intent": (
+                "routine_request"
+                if intent.get("routine_request")
+                else "product_recommendation"
+                if intent.get("product_request")
+                else "ingredient_question"
+                if intent.get("ingredient_question")
+                else "safety_or_medical"
+                if intent.get("safety_or_medical")
+                else "general_question"
+            ),
+            "needs_products": wants_products,
+            "memory_updates": memory_updates,
+        },
+        memory_updates=memory_updates,
+    )
+
     return normalize_json(
         {
-            "response": align_response_with_product_count(plain_chat_response_text(response), products),
-            "products": products,
+            "response": align_response_with_product_count(
+                plain_chat_response_text(validated["response_text"]),
+                validated["products"],
+            ),
+            "products": validated["products"],
             "memory_updates": memory_updates,
+            "validation": {
+                "issues": validated["issues"],
+                "constraints": validated["constraints"],
+            },
         }
     )
 
@@ -1800,13 +1831,28 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             plain_chat_response_text(response_data.get("response_text", "")),
             response_data.get("followup_questions", []),
         )
+        validated = validate_chat_response(
+            message=request.message,
+            response_text=response_text,
+            products=products,
+            skin_profile=request.skin_profile,
+            nlu=nlu,
+            memory_updates=memory_updates,
+        )
         return normalize_json(
             {
-                "response": align_response_with_product_count(response_text, products),
-                "products": products,
+                "response": align_response_with_product_count(
+                    validated["response_text"],
+                    validated["products"],
+                ),
+                "products": validated["products"],
                 "memory": updated_memory,
                 "memory_updates": memory_updates,
                 "nlu": nlu,
+                "validation": {
+                    "issues": validated["issues"],
+                    "constraints": validated["constraints"],
+                },
             }
         )
     except Exception as exc:
