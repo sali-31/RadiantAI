@@ -612,6 +612,32 @@ def align_response_with_product_count(response_text: str, products: List[Dict[st
     return aligned
 
 
+def plain_chat_response_text(value: Any) -> str:
+    text = str(value or "").strip()
+    for _ in range(3):
+        if not text.startswith("{"):
+            return text
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            match = re.search(
+                r'"response_text"\s*:\s*"(?P<text>.*?)(?<!\\)"\s*(?:,|\})',
+                text,
+                flags=re.DOTALL,
+            )
+            if not match:
+                return text
+            text = match.group("text").replace('\\"', '"').replace("\\n", "\n").strip()
+            continue
+        if not isinstance(parsed, dict):
+            return text
+        next_text = parsed.get("response_text") or parsed.get("response")
+        if not next_text or str(next_text).strip() == text:
+            return text
+        text = str(next_text).strip()
+    return text
+
+
 def append_follow_up_questions(response_text: str, questions: List[str]) -> str:
     clean_questions = [question.strip() for question in questions if question and question.strip()]
     if not clean_questions:
@@ -794,7 +820,7 @@ def local_chat_response(
 
     return normalize_json(
         {
-            "response": align_response_with_product_count(response, products),
+            "response": align_response_with_product_count(plain_chat_response_text(response), products),
             "products": products,
             "memory_updates": memory_updates,
         }
@@ -1064,7 +1090,7 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
             request.conversation_history,
         )
         response_text = append_follow_up_questions(
-            response_data.get("response_text", ""),
+            plain_chat_response_text(response_data.get("response_text", "")),
             response_data.get("followup_questions", []),
         )
         return normalize_json(

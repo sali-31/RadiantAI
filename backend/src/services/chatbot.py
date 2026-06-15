@@ -59,6 +59,7 @@ Product rules:
 - For serum requests, prefer serum/ampoule/treatment products.
 - For sunscreen requests, prefer SPF/sunscreen products.
 - For routine requests, include cleanser, treatment/serum, moisturizer, sunscreen, and toner when useful.
+- For routine + products requests, write a useful AM/PM routine in response_text and put product names in recommended_products.
 
 Safety:
 - Mention red flags briefly: painful, spreading, infected, severe, scarring, or persistent symptoms should be checked by a dermatologist.
@@ -71,7 +72,7 @@ Style:
 
 Return valid JSON only with this schema:
 {
-  "response_text": "Markdown answer for the user.",
+  "response_text": "Markdown answer for the user. This value must be plain Markdown text only, never a JSON string and never an object.",
   "recommended_products": ["clear searchable product name 1", "clear searchable product name 2"],
   "product_query": "short optimized search query for the product engine",
   "wants_products": true,
@@ -172,23 +173,7 @@ Return valid JSON only with this schema:
                 response = re.sub(r"^```(?:json)?", "", response.strip(), flags=re.IGNORECASE)
                 response = re.sub(r"```$", "", response.strip())
             
-            try:
-                response_data = json.loads(response)
-            except json.JSONDecodeError:
-                json_match = re.search(r"\{.*\}", response, flags=re.DOTALL)
-                if json_match:
-                    try:
-                        response_data = json.loads(json_match.group(0))
-                    except json.JSONDecodeError:
-                        response_data = {
-                            "response_text": response,
-                            "recommended_products": []
-                        }
-                else:
-                    response_data = {
-                        "response_text": response,
-                        "recommended_products": []
-                    }
+            response_data = self._parse_model_response(response)
 
             response_data["response_text"] = self._remove_internal_notes(
                 str(response_data.get("response_text", ""))
@@ -201,6 +186,66 @@ Return valid JSON only with this schema:
         except Exception as e:
             logger.error(f"Error generating chat response: {e}")
             raise
+
+    def _parse_model_response(self, response: str) -> Dict:
+        """Parse Gemini JSON and unwrap accidental nested JSON strings."""
+        try:
+            parsed = json.loads(response)
+        except json.JSONDecodeError:
+            json_match = re.search(r"\{.*\}", response, flags=re.DOTALL)
+            if not json_match:
+                return {"response_text": response, "recommended_products": []}
+            try:
+                parsed = json.loads(json_match.group(0))
+            except json.JSONDecodeError:
+                return {"response_text": response, "recommended_products": []}
+
+        if isinstance(parsed, str):
+            nested = self._try_parse_json_string(parsed)
+            return nested if isinstance(nested, dict) else {"response_text": parsed, "recommended_products": []}
+
+        if not isinstance(parsed, dict):
+            return {"response_text": str(parsed), "recommended_products": []}
+
+        nested_response = parsed.get("response_text")
+        if isinstance(nested_response, str):
+            nested = self._try_parse_json_string(nested_response)
+            if isinstance(nested, dict) and "response_text" in nested:
+                merged = parsed.copy()
+                for key, value in nested.items():
+                    if value not in (None, "", [], {}):
+                        merged[key] = value
+                parsed = merged
+        elif isinstance(nested_response, dict):
+            merged = parsed.copy()
+            for key, value in nested_response.items():
+                if value not in (None, "", [], {}):
+                    merged[key] = value
+            parsed = merged
+
+        return parsed
+
+    def _try_parse_json_string(self, value: str) -> Optional[Dict]:
+        clean = value.strip()
+        if clean.startswith("```"):
+            clean = re.sub(r"^```(?:json)?", "", clean, flags=re.IGNORECASE).strip()
+            clean = re.sub(r"```$", "", clean).strip()
+        if not clean.startswith("{"):
+            return None
+        try:
+            parsed = json.loads(clean)
+        except json.JSONDecodeError:
+            text_match = re.search(
+                r'"response_text"\s*:\s*"(?P<text>.*?)(?<!\\)"\s*(?:,|\})',
+                clean,
+                flags=re.DOTALL,
+            )
+            if not text_match:
+                return None
+            response_text = text_match.group("text")
+            response_text = response_text.replace('\\"', '"').replace("\\n", "\n")
+            return {"response_text": response_text}
+        return parsed if isinstance(parsed, dict) else None
 
     def _remove_internal_notes(self, response_text: str) -> str:
         """Strip model meta-commentary if the provider leaks it anyway."""
@@ -225,8 +270,9 @@ Return valid JSON only with this schema:
             "preferences": list(memory_updates.get("preferences") or []),
             "avoid": list(memory_updates.get("avoid") or []),
         }
+        response_text = self._extract_plain_response_text(response_data.get("response_text", ""))
         return {
-            "response_text": str(response_data.get("response_text", "")).strip(),
+            "response_text": response_text,
             "recommended_products": list(response_data.get("recommended_products") or []),
             "product_query": str(response_data.get("product_query") or "").strip(),
             "wants_products": bool(response_data.get("wants_products", False)),
@@ -238,6 +284,24 @@ Return valid JSON only with this schema:
             ),
             "memory_updates": normalized_memory,
         }
+
+    def _extract_plain_response_text(self, value: object) -> str:
+        """Return user-facing Markdown even if response_text contains nested JSON."""
+        if isinstance(value, dict):
+            return self._extract_plain_response_text(value.get("response_text") or value.get("response") or "")
+
+        text = str(value or "").strip()
+        for _ in range(3):
+            if not text.startswith("{"):
+                return text
+            nested = self._try_parse_json_string(text)
+            if not isinstance(nested, dict):
+                return text
+            next_text = nested.get("response_text") or nested.get("response")
+            if not next_text or str(next_text).strip() == text:
+                return text
+            text = str(next_text).strip()
+        return text
 
     def _build_context_block(
         self,

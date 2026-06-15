@@ -198,6 +198,25 @@ const mergeSkinProfile = (profile: SkinProfile, updates?: MemoryUpdates): SkinPr
     };
 };
 
+const cleanBotResponseContent = (value: unknown): string => {
+    if (typeof value !== 'string') {
+        return 'I couldn\'t process that. Please try again.';
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed.startsWith('{')) {
+        return value;
+    }
+
+    try {
+        const parsed = JSON.parse(trimmed) as { response_text?: unknown; response?: unknown };
+        const nested = parsed.response_text || parsed.response;
+        return typeof nested === 'string' && nested.trim() ? nested : value;
+    } catch {
+        return value;
+    }
+};
+
 export const Chatbot: React.FC<Props> = ({ userId }) => {
     const [threads, setThreads] = useState<ChatThread[]>(() => loadThreads(userId));
     const [activeThreadId, setActiveThreadId] = useState(() => getInitialActiveThreadId(userId, loadThreads(userId)));
@@ -357,7 +376,7 @@ export const Chatbot: React.FC<Props> = ({ userId }) => {
             const botMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 type: 'bot',
-                content: data.response || 'I couldn\'t process that. Please try again.',
+                content: cleanBotResponseContent(data.response),
                 timestamp: new Date(),
                 products: data.products || []
             };
