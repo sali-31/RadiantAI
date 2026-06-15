@@ -63,7 +63,25 @@ PRODUCT_TERMS = [
     "treatment",
 ]
 INGREDIENT_TERMS = ["ingredient", "ingredients", "active", "actives", "what should i use"]
-SAFETY_TERMS = ["pain", "painful", "bleeding", "infection", "infected", "swollen", "pus", "spreading", "severe"]
+SAFETY_TERMS = [
+    "pain",
+    "painful",
+    "bleeding",
+    "infection",
+    "infected",
+    "swollen",
+    "pus",
+    "spreading",
+    "severe",
+    "rash",
+    "blister",
+    "blistering",
+    "scarring",
+    "white patches",
+    "red hot",
+    "hot and swollen",
+    "stop using",
+]
 
 
 def normalize_text(text: str) -> str:

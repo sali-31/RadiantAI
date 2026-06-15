@@ -58,7 +58,7 @@ PRODUCT_FORM_PATTERNS = {
     "cleanser": ["cleanser", "face wash", "wash"],
     "toner": ["toner", "essence"],
     "moisturizer": ["moisturizer", "cream", "lotion"],
-    "treatment": ["treatment", "retinol", "adapalene", "benzoyl", "salicylic"],
+    "treatment": ["treatment", "spot treatment"],
 }
 
 PRODUCT_REQUEST_TERMS = [
@@ -67,13 +67,32 @@ PRODUCT_REQUEST_TERMS = [
     "product",
     "products",
     "buy",
-    "best",
-    "good",
-    "which",
     "what should i buy",
 ]
 
-SAFETY_TERMS = ["painful", "spreading", "swollen", "pus", "infection", "infected", "rash", "blister", "bleeding"]
+SAFETY_TERMS = [
+    "painful",
+    "spreading",
+    "swollen",
+    "pus",
+    "infection",
+    "infected",
+    "rash",
+    "blister",
+    "blistering",
+    "bleeding",
+    "red hot",
+    "hot and swollen",
+    "scarring",
+    "white patches",
+    "large painful bump",
+    "should i pop",
+    "stop using",
+    "face burn",
+    "burns",
+    "itchy",
+    "cracked",
+]
 
 
 class SkincareNLU:

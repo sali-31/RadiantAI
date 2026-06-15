@@ -454,6 +454,23 @@ def wants_product_recommendations(message: str) -> bool:
     is_ingredient_question = any(term in text for term in INGREDIENT_QUESTION_TERMS)
     explicit_product = any(term in text for term in PRODUCT_REQUEST_TERMS)
     routine = any(term in text for term in ROUTINE_INTENT_TERMS)
+    safety = any(
+        term in text
+        for term in [
+            "rash",
+            "swollen",
+            "pus",
+            "painful",
+            "spreading",
+            "blister",
+            "scarring",
+            "stop using",
+            "should i pop",
+        ]
+    )
+
+    if safety:
+        return False
 
     if is_ingredient_question and not explicit_product:
         return False
@@ -796,14 +813,58 @@ def local_chat_response(
 ) -> Dict[str, Any]:
     text = message.lower()
     current_concerns = infer_concerns(message)
-    concerns = current_concerns or infer_concerns(message, conversation_history)
     intent = infer_chat_intent(message)
+    use_history_context = intent.get("followup") and not any(
+        term in text
+        for term in [
+            "rash",
+            "swollen",
+            "painful",
+            "pus",
+            "blister",
+            "white patches",
+            "stop using",
+            "wait between",
+            "how long should i wait",
+        ]
+    )
+    concerns = current_concerns or (infer_concerns(message, conversation_history) if use_history_context else [])
     skin_type = infer_skin_type(message, conversation_history) or (skin_profile or {}).get("skin_type")
     condition = infer_chat_condition(" ".join(concerns) or message)
     wants_products = wants_product_recommendations(message)
     memory_updates = build_memory_updates(message, conversation_history)
 
-    if any(term in text for term in ["wait between", "how long should i wait", "between skincare steps", "between steps", "layer skincare"]):
+    if intent.get("safety_or_medical") or any(
+        term in text
+        for term in [
+            "rash",
+            "spreading",
+            "painful",
+            "swollen",
+            "pus",
+            "red, hot",
+            "hot and swollen",
+            "blister",
+            "blistering",
+            "scarring",
+            "white patches",
+            "should i pop",
+            "stop using",
+            "face burn",
+            "burns",
+            "itchy",
+            "cracked",
+        ]
+    ):
+        response = (
+            "This sounds like a situation where **skincare alone may not be enough**.\n\n"
+            "- **Stop** any new or irritating product for now.\n"
+            "- Keep the area gentle: mild cleanser, plain moisturizer, and sunscreen if the skin is intact.\n"
+            "- Avoid exfoliating acids, retinoids, vitamin C, scrubs, or popping/squeezing inflamed bumps.\n"
+            "- If symptoms are **painful, spreading, hot, swollen, pus-filled, blistering, scarring, or persistent**, contact a **doctor or dermatologist**. Seek urgent care for facial swelling, rapidly spreading redness/heat, or a painful one-sided blistering rash."
+        )
+        wants_products = False
+    elif any(term in text for term in ["wait between", "how long should i wait", "between skincare steps", "between steps", "layer skincare"]):
         response = (
             "You usually **do not need long wait times** between skincare steps.\n\n"
             "- For most steps, wait about **30-60 seconds**, or until the product no longer feels very wet.\n"
