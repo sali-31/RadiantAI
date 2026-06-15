@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from .services.analysis import perform_ensemble_analysis
 from .services.chatbot import SkinHealthChatbot
 from .services.live_catalog import products_for_step, search_live_catalog, search_verified_catalog
+from .services.memory import get_user_memory, memory_summary, update_user_memory
 from .services.privacy import scrub_image_metadata
 from .services.product_recommender import ProductRecommender
 from .services.storage import is_s3_configured, looks_like_s3_key, presigned_s3_url, upload_image_to_s3
@@ -61,6 +62,7 @@ ROUTINE_STEPS = {
         "snail",
     ],
     "moisturizer": ["moisturizer", "cream", "lotion", "barrier"],
+    "sunscreen": ["sunscreen", "spf", "sun cream", "sun serum", "sunstick"],
 }
 
 STEP_CATEGORY_ALIASES = {
@@ -68,6 +70,7 @@ STEP_CATEGORY_ALIASES = {
     "toner": ["toner", "essence"],
     "treatment": ["treatment", "serum", "ampoule", "spot_treatment"],
     "moisturizer": ["moisturizer", "cream", "lotion"],
+    "sunscreen": ["sunscreen"],
 }
 
 PRODUCT_INTENT_TERMS = [
@@ -523,6 +526,25 @@ def align_response_with_product_count(response_text: str, products: List[Dict[st
     return aligned
 
 
+def append_follow_up_questions(response_text: str, questions: List[str]) -> str:
+    clean_questions = [question.strip() for question in questions if question and question.strip()]
+    if not clean_questions:
+        return response_text
+    if "follow-up" in response_text.lower() or "follow up" in response_text.lower():
+        return response_text
+    bullets = "\n".join(f"- {question}" for question in clean_questions[:3])
+    return f"{response_text.rstrip()}\n\n**A few questions so I can fine-tune this:**\n{bullets}"
+
+
+def product_names_from_context(products: List[Dict[str, Any]]) -> List[str]:
+    names = []
+    for product in products:
+        name = product.get("name") or product.get("title")
+        if name:
+            names.append(str(name))
+    return names
+
+
 def local_chat_response(message: str) -> Dict[str, Any]:
     text = message.lower()
     condition = infer_chat_condition(message)
@@ -606,6 +628,14 @@ def local_chat_response(message: str) -> Dict[str, Any]:
             products = get_recommender().recommend_for_condition(condition, top_n=5)
 
     return normalize_json({"response": align_response_with_product_count(response, products), "products": products})
+
+
+def smart_local_chat_response(message: str, user_id: str, memory: Dict[str, Any]) -> Dict[str, Any]:
+    response = local_chat_response(message)
+    products = response.get("products", [])
+    updated_memory = update_user_memory(user_id, message, products)
+    response["memory"] = updated_memory
+    return response
 
 
 def build_step_recommendations(condition: str, per_step: int = 2, query: str = "") -> List[Dict[str, Any]]:
@@ -805,30 +835,49 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
+    user_id = request.user_id or "anonymous"
+    memory = get_user_memory(user_id)
+    condition = infer_chat_condition(request.message)
+    wants_products = wants_product_recommendations(request.message)
+    retrieved_products = products_for_chat_message(request.message, condition) if wants_products else []
+
     chatbot = get_chatbot()
     if chatbot is None:
-        return local_chat_response(request.message)
+        return smart_local_chat_response(request.message, user_id, memory)
 
     try:
-        response_data = chatbot.chat(request.message, request.conversation_history)
+        response_data = chatbot.chat(
+            request.message,
+            request.conversation_history,
+            product_context=retrieved_products,
+            memory_context=memory_summary(memory),
+        )
         product_names = response_data.get("recommended_products", [])
         products = get_recommender().find_products_by_names(product_names) if product_names else []
-        if wants_product_recommendations(request.message):
-            condition = infer_chat_condition(request.message)
+        if wants_products:
             products = merge_products(
                 products,
-                products_for_chat_message(request.message, condition),
+                retrieved_products,
                 limit=16,
             )
+        if wants_products and not response_data.get("recommended_products"):
+            response_data["recommended_products"] = product_names_from_context(products)
+
+        updated_memory = update_user_memory(user_id, request.message, products)
+        response_text = append_follow_up_questions(
+            response_data.get("response_text", ""),
+            response_data.get("follow_up_questions", []),
+        )
         return normalize_json(
             {
-                "response": align_response_with_product_count(response_data.get("response_text", ""), products),
+                "response": align_response_with_product_count(response_text, products),
                 "products": products,
+                "memory": updated_memory,
             }
         )
     except Exception as exc:
         logger.warning("Gemini chat failed; using local skincare fallback: %s", exc)
-        return local_chat_response(request.message)
+        return smart_local_chat_response(request.message, user_id, memory)
 
 
 @app.post("/api/image-url")

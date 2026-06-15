@@ -26,41 +26,34 @@ class SkinHealthChatbot:
         # Updated to use a supported model
         self.model = genai.GenerativeModel("gemini-2.5-flash")
         
-        self.system_prompt = """You are an expert dermatology assistant and skincare expert. 
-            Your role is to provide accurate, helpful information about:
-            - Skin conditions and their causes
-            - Skincare routines and habits
-            - Active ingredients and their benefits
-            - Product recommendations and alternatives
-            - General dermatological advice
-            - Treatment options and when to see a dermatologist
+        self.system_prompt = """You are RadiantAI, a careful skincare advisor for a consumer skincare app.
 
-            Guidelines:
-            1. Provide evidence-based advice
-            2. Always recommend consulting a dermatologist for serious conditions
-            3. Be empathetic and encouraging
-            4. Explain terms in simple language
-            5. Give actionable tips and routines
-            6. Consider individual skin types (oily, dry, sensitive, combination, etc.)
-            7. Be honest about limitations and when professional help is needed
+            Your job:
+            - Give practical skincare guidance in clear language.
+            - Use the provided user memory when it is relevant.
+            - Use the provided product catalog context as the source of truth for product recommendations.
+            - Prefer products from Sephora, StyleKorean, popular Korean brands, and the local verified/Amazon catalog when provided.
+            - Ask 1-3 focused follow-up questions only when the answer would be unsafe or too vague without them.
 
-            Keep responses concise but informative (2-3 paragraphs max).
-            Use bullet points for lists when helpful.
-            Maintain a friendly, supportive tone.
+            Safety and quality rules:
+            1. Do not diagnose. Say when a dermatologist is needed for painful, spreading, infected, severe, scarring, or persistent symptoms.
+            2. Avoid weak generic answers. If products are requested, give concrete product/routine guidance.
+            3. Respect allergies, sensitivities, budget, skin type, and avoided ingredients from memory.
+            4. Never invent retailer links, prices, ratings, or product availability.
+            5. If catalog products are provided, recommend only those catalog products by exact name.
+            6. If the user asks for a routine, cover cleanser, toner, treatment, moisturizer, and sunscreen.
+            7. For routines, include at least 2 product options for each step when the catalog context supports it.
+            8. Keep active ingredients realistic: introduce strong actives slowly and remind users to use SPF with brightening acids or retinoids.
+            9. Do not reveal internal reasoning, drafting notes, uncertainty narration, or self-corrections.
+            10. Never write phrases like "self-correction", "let me re-evaluate", "I should", or "try again".
 
-            Do not reveal internal reasoning, drafting notes, uncertainty narration, or self-corrections.
-            Never write phrases like "self-correction", "let me re-evaluate", "I should", or "try again".
-            Give the final answer directly.
-            
-            IMPORTANT: You must return your response in valid JSON format with the following structure:
+            Return valid JSON only:
             {
-                "response_text": "Your helpful, empathetic advice here. Use Markdown formatting (bullet points, bold text) for readability.",
-                "recommended_products": ["Product 1", "Product 2", ..., "Product N"]
+                "response_text": "Concise Markdown answer. Use headings or bullets when helpful.",
+                "recommended_products": ["Exact Product Name 1", "Exact Product Name 2"],
+                "follow_up_questions": ["Question 1"],
+                "remembered_facts": {"skin_type": "", "budget_max": null, "concerns": [], "allergies": [], "preferred_brands": []}
             }
-
-            When recommending products, include clear retail product names only in recommended_products.
-            Prefer popular, searchable skincare products from Sephora, StyleKorean, or established Korean skincare brands when relevant.
-            If the user asks for a specific ingredient, recommend products that actually contain or clearly target that ingredient/concern.
             """
         
     def _sanitize_input(self, text: str) -> tuple[bool, str]:
@@ -96,7 +89,13 @@ class SkinHealthChatbot:
         return (is_safe, text)            
             
 
-    def chat(self, user_message: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> str:
+    def chat(
+        self,
+        user_message: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        product_context: Optional[List[Dict]] = None,
+        memory_context: str = "",
+    ) -> Dict:
         """
         Get a response from the chatbot
         
@@ -115,12 +114,14 @@ class SkinHealthChatbot:
                 logger.warning(f"Security Alert: Potential malicious code injection detected in \n{user_message}")
                 return "I apologize, but I cannot process that request."
             
+            context_block = self._build_context_block(product_context or [], memory_context)
+
             # Build the full prompt with conversation history
             if conversation_history:
                 messages = self._build_messages_from_history(conversation_history)
-                full_prompt = "\n".join(messages) + f"\n\nUser: {clean_message}"
+                full_prompt = "\n".join(messages) + f"\n\n{context_block}\n\nUser: {clean_message}"
             else:
-                full_prompt = f"{self.system_prompt}\n\nUser: {clean_message}"
+                full_prompt = f"{self.system_prompt}\n\n{context_block}\n\nUser: {clean_message}"
             
             # Generate response
             response = self.model.generate_content(full_prompt)
@@ -154,6 +155,9 @@ class SkinHealthChatbot:
             response_data["response_text"] = self._remove_internal_notes(
                 str(response_data.get("response_text", ""))
             )
+            response_data.setdefault("recommended_products", [])
+            response_data.setdefault("follow_up_questions", [])
+            response_data.setdefault("remembered_facts", {})
             
             logger.info(f"Chat response generated successfully")
             return response_data
@@ -173,6 +177,26 @@ class SkinHealthChatbot:
         for pattern in blocked_patterns:
             cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
         return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+    def _build_context_block(self, product_context: List[Dict], memory_context: str) -> str:
+        lines = ["Context for this answer:"]
+        lines.append(f"Saved user memory: {memory_context or 'No saved user preferences yet.'}")
+
+        if product_context:
+            lines.append("Retrieved product catalog candidates. Use exact names only if recommending products:")
+            for index, product in enumerate(product_context[:20], start=1):
+                name = product.get("name") or product.get("title") or ""
+                brand = product.get("brand") or ""
+                step = product.get("routine_step") or product.get("category") or "skincare"
+                retailer = product.get("retailer") or product.get("source") or product.get("data_source") or ""
+                price = product.get("price") or "See retailer"
+                lines.append(
+                    f"{index}. {brand} {name} | step: {step} | retailer: {retailer} | price: {price}"
+                )
+        else:
+            lines.append("No product catalog candidates were retrieved.")
+
+        return "\n".join(lines)
 
     def _build_messages_from_history(self, conversation_history: List[Dict[str, str]]) -> List[str]:
         """Convert conversation history to message format"""

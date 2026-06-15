@@ -48,6 +48,7 @@ backend/data/raw/
 backend/data/processed/
 backend/data/samples/
 backend/data/yolo_dataset/
+backend/data/chat_memory.json
 backend/uploads/
 **/yolo_dataset/
 
@@ -62,4 +63,4 @@ build/
 *.egg-info/
 
 
-docs/
+# Documentation is part of the MVP presentation.
