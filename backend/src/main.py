@@ -367,7 +367,24 @@ def analysis_text_or_default(ai_analysis: Dict[str, Any]) -> str:
 def infer_chat_condition(message: str) -> str:
     text = message.lower()
     condition_keywords = {
-        "acne": ["acne", "pimple", "breakout", "blemish", "blackhead", "whitehead"],
+        "acne": [
+            "acne",
+            "pimple",
+            "breakout",
+            "blemish",
+            "blackhead",
+            "blackheads",
+            "whitehead",
+            "whiteheads",
+            "comedone",
+            "comedones",
+            "closed comedone",
+            "closed comedones",
+            "clogged pore",
+            "clogged pores",
+            "tiny bumps",
+            "forehead bumps",
+        ],
         "rosacea": ["rosacea", "redness", "flushing"],
         "eczema": ["eczema", "itchy", "rash", "dermatitis"],
         "dry_skin": ["dry", "flaky", "dehydrated"],
@@ -620,8 +637,19 @@ def plain_chat_response_text(value: Any) -> str:
         try:
             parsed = json.loads(text)
         except json.JSONDecodeError:
+            if '\\"response_text\\"' in text or "\\n" in text:
+                unescaped = text.replace('\\"', '"').replace("\\n", "\n")
+                try:
+                    parsed = json.loads(unescaped)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    next_text = parsed.get("response_text") or parsed.get("response")
+                    if next_text:
+                        text = str(next_text).strip()
+                        continue
             match = re.search(
-                r'"response_text"\s*:\s*"(?P<text>.*?)(?<!\\)"\s*(?:,|\})',
+                r'\\?"response_text\\?"\s*:\s*\\?"(?P<text>.*?)(?<!\\)\\?"\s*(?:,|\})',
                 text,
                 flags=re.DOTALL,
             )
@@ -681,7 +709,8 @@ def local_chat_response(
     skin_profile: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     text = message.lower()
-    concerns = infer_concerns(message, conversation_history)
+    current_concerns = infer_concerns(message)
+    concerns = current_concerns or infer_concerns(message, conversation_history)
     intent = infer_chat_intent(message)
     skin_type = infer_skin_type(message, conversation_history) or (skin_profile or {}).get("skin_type")
     condition = infer_chat_condition(" ".join(concerns) or message)
@@ -759,8 +788,13 @@ def local_chat_response(
             "Avoid stacking too many actives on the same night. Progress usually takes weeks to months."
         )
     elif intent["routine_request"] and "acne" in concerns:
+        acne_intro = (
+            "Here is a **closed-comedone routine** for clogged pores and tiny under-the-skin bumps:\n\n"
+            if any(term in text for term in ["closed comedone", "closed comedones", "comedone", "comedones", "tiny bumps", "clogged pore"])
+            else "Here is an **acne-focused routine** that treats breakouts without stripping the skin:\n\n"
+        )
         response = (
-            "Here is an **acne-focused routine** that treats breakouts without stripping the skin:\n\n"
+            acne_intro +
             "**Morning**\n"
             "1. Gentle cleanser.\n"
             "2. Optional **niacinamide** to support oil balance and redness.\n"
@@ -768,7 +802,7 @@ def local_chat_response(
             "4. **Sunscreen SPF 30+** every morning.\n\n"
             "**Night**\n"
             "1. Cleanser.\n"
-            "2. Treatment: **salicylic acid** for clogged pores, **benzoyl peroxide** for inflamed pimples, or **adapalene** for persistent acne.\n"
+            "2. Treatment: **salicylic acid** for clogged pores/closed comedones, or **adapalene** for persistent comedonal acne. Use benzoyl peroxide mainly if bumps become inflamed pimples.\n"
             "3. Moisturizer to reduce dryness and irritation.\n\n"
             "Start with one active at a time. If acne is painful, scarring, or spreading, check in with a dermatologist."
         )
@@ -1041,7 +1075,8 @@ def chat(request: ChatRequest) -> Dict[str, Any]:
 
     user_id = request.user_id or "anonymous"
     memory = get_user_memory(user_id)
-    concerns = infer_concerns(request.message, request.conversation_history)
+    current_concerns = infer_concerns(request.message)
+    concerns = current_concerns or infer_concerns(request.message, request.conversation_history)
     intent = infer_chat_intent(request.message)
     retrieved_knowledge = get_retrieved_knowledge(request.message, concerns)
     product_query = product_query_for_message(request.message, concerns, intent)
