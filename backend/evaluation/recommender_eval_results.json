@@ -1,0 +1,835 @@
+{
+  "k": 8,
+  "random_state": 42,
+  "metric_definitions": {
+    "top_k_relevance": "Fraction of returned products matching the scenario condition tag or concern keywords.",
+    "budget_fit_rate": "Fraction of returned products with price at or below the scenario budget.",
+    "category_coverage": "Fraction of target routine categories represented by returned products.",
+    "average_rating": "Mean catalog rating for returned products.",
+    "price_diversity": "Coefficient of variation for returned product prices; higher means more varied price points."
+  },
+  "summary": {
+    "budget_aware_recommender": {
+      "top_k_relevance": 0.792,
+      "budget_fit_rate": 1.0,
+      "category_coverage": 1.0,
+      "average_rating": 4.721,
+      "price_diversity": 0.39
+    },
+    "condition_aware_recommender": {
+      "top_k_relevance": 0.729,
+      "budget_fit_rate": 0.979,
+      "category_coverage": 0.584,
+      "average_rating": 4.763,
+      "price_diversity": 0.39
+    },
+    "random_products": {
+      "top_k_relevance": 0.438,
+      "budget_fit_rate": 0.875,
+      "category_coverage": 0.875,
+      "average_rating": 4.35,
+      "price_diversity": 0.751
+    },
+    "top_rated_products": {
+      "top_k_relevance": 0.375,
+      "budget_fit_rate": 1.0,
+      "category_coverage": 0.584,
+      "average_rating": 4.85,
+      "price_diversity": 0.412
+    }
+  },
+  "scenario_results": [
+    {
+      "condition": "acne",
+      "budget": 30,
+      "strategy": "random_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.0,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 1.0,
+        "average_rating": 4.35,
+        "price_diversity": 0.751
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Shine Control Matte Booster Face Primer & Serum, Skin-Mattifying Serum-to-Primer with Rice Protein, Absorbs Excess Oil & Keeps Skin Shine Free, 1.0 fl. oz",
+          "price": 11.09,
+          "rating": 4.0,
+          "category": "treatment"
+        },
+        {
+          "title": "PURA D'OR 16 Oz ORGANIC Aloe Vera Gel - Lavender - All Natural - ZERO Artificial Preservatives - Deeply Hydrating & Moisturizing - Sunburn, Bug Bites, Rashes, Small Cuts, Eczema Relief - Skin & Hair",
+          "price": 11.23,
+          "rating": 4.3,
+          "category": "treatment"
+        },
+        {
+          "title": "SeoulCeuticals Korean Skin Care Korean- 20% Vitamin C Hyaluronic Acid Serum + CE Ferulic Acid - Potent Anti Aging, Anti Wrinkle Korean Beauty 1oz",
+          "price": 15.98,
+          "rating": 4.3,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "acne",
+      "budget": 30,
+      "strategy": "top_rated_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.125,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.667,
+        "average_rating": 4.85,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Seborrheic Dermatitis & Psoriasis Face Cream: Dermatitis Treatment Cream for Fungal Acne, Soothes Redness & Flaking on Face, Scalp & Chest - with 12 Plant-Based Ingredients, Steroid-Free",
+          "price": 19.99,
+          "rating": 4.9,
+          "category": "treatment"
+        },
+        {
+          "title": "TXA+Niacinamide 15% Glow Facial Serum - Dark Spot remover for face Serum for Uneven Skin Tone, Texture and Hydration After Spot Care, High-Potency Tranexamic Acid Niacinamide Serum (50ml /1.69 fl.oz)",
+          "price": 29.99,
+          "rating": 4.9,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "acne",
+      "budget": 30,
+      "strategy": "condition_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.625,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.667,
+        "average_rating": 4.713,
+        "price_diversity": 0.468
+      },
+      "sample_products": [
+        {
+          "title": "Murad Clarifying Cleanser \u2013 Salicylic Acid & Green Tea Formula for Acne, Deep Pore Cleansing, Oil Control & Breakout Prevention for Clear, Balanced, Healthy-Looking Skin \u2013 5 Fl Oz",
+          "price": 21.75,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "THAYERS Alcohol-Free Rose Petal Witch Hazel Facial Toner for Glowing Skin, Soothing, Hydrating, Refreshing Toner for All Skin Types, 12oz (Packaging May Vary)",
+          "price": 8.74,
+          "rating": 4.7,
+          "category": "toner"
+        },
+        {
+          "title": "La Roche-Posay Toleriane Purifying Foaming Facial Cleanser, Oil Free Face Wash for Women & Men with Niacinamide + Ceramides, Pore Cleanser Safe For Sensitive Skin, Won\u2019t Dry Out Skin, Soap Free",
+          "price": 14.99,
+          "rating": 4.7,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "acne",
+      "budget": 30,
+      "strategy": "budget_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.5,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 1.0,
+        "average_rating": 4.7,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Murad Clarifying Cleanser \u2013 Salicylic Acid & Green Tea Formula for Acne, Deep Pore Cleansing, Oil Control & Breakout Prevention for Clear, Balanced, Healthy-Looking Skin \u2013 5 Fl Oz",
+          "price": 21.75,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "La Roche-Posay Toleriane Purifying Foaming Facial Cleanser, Oil Free Face Wash for Women & Men with Niacinamide + Ceramides, Pore Cleanser Safe For Sensitive Skin, Won\u2019t Dry Out Skin, Soap Free",
+          "price": 14.99,
+          "rating": 4.7,
+          "category": "cleanser"
+        },
+        {
+          "title": "The Ordinary Niacinamide 10% + Zinc 1%, Smoothing Serum for Blemish-Prone Skin",
+          "price": 6.0,
+          "rating": 4.7,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "hyperpigmentation",
+      "budget": 35,
+      "strategy": "random_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.125,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 0.75,
+        "average_rating": 4.35,
+        "price_diversity": 0.751
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Shine Control Matte Booster Face Primer & Serum, Skin-Mattifying Serum-to-Primer with Rice Protein, Absorbs Excess Oil & Keeps Skin Shine Free, 1.0 fl. oz",
+          "price": 11.09,
+          "rating": 4.0,
+          "category": "treatment"
+        },
+        {
+          "title": "PURA D'OR 16 Oz ORGANIC Aloe Vera Gel - Lavender - All Natural - ZERO Artificial Preservatives - Deeply Hydrating & Moisturizing - Sunburn, Bug Bites, Rashes, Small Cuts, Eczema Relief - Skin & Hair",
+          "price": 11.23,
+          "rating": 4.3,
+          "category": "treatment"
+        },
+        {
+          "title": "SeoulCeuticals Korean Skin Care Korean- 20% Vitamin C Hyaluronic Acid Serum + CE Ferulic Acid - Potent Anti Aging, Anti Wrinkle Korean Beauty 1oz",
+          "price": 15.98,
+          "rating": 4.3,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "hyperpigmentation",
+      "budget": 35,
+      "strategy": "top_rated_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.375,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.5,
+        "average_rating": 4.85,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Seborrheic Dermatitis & Psoriasis Face Cream: Dermatitis Treatment Cream for Fungal Acne, Soothes Redness & Flaking on Face, Scalp & Chest - with 12 Plant-Based Ingredients, Steroid-Free",
+          "price": 19.99,
+          "rating": 4.9,
+          "category": "treatment"
+        },
+        {
+          "title": "TXA+Niacinamide 15% Glow Facial Serum - Dark Spot remover for face Serum for Uneven Skin Tone, Texture and Hydration After Spot Care, High-Potency Tranexamic Acid Niacinamide Serum (50ml /1.69 fl.oz)",
+          "price": 29.99,
+          "rating": 4.9,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "hyperpigmentation",
+      "budget": 35,
+      "strategy": "condition_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.875,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.5,
+        "average_rating": 4.725,
+        "price_diversity": 0.502
+      },
+      "sample_products": [
+        {
+          "title": "Brickell Men's Retinol Skin Care Serum Treatment For Firming Face Lines & Eye Wrinkles, Deep Hydrating Facial Skincare Serum For Anti-Aging, Fragrance Free, 1 Ounce",
+          "price": 32.0,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "celimax Pore+Dark Spot Brightening Cream Mask 4EA | Non-Sticky Sheet for Enlarged Pores with Niacinamide, Tranexamic Acid, Non-Irritating, Hydrating, Hyperpigmentation, Korean Facial Mask",
+          "price": 15.6,
+          "rating": 4.8,
+          "category": "mask"
+        },
+        {
+          "title": "The Ordinary Niacinamide 10% + Zinc 1%, Smoothing Serum for Blemish-Prone Skin",
+          "price": 6.0,
+          "rating": 4.7,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "hyperpigmentation",
+      "budget": 35,
+      "strategy": "budget_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.875,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 1.0,
+        "average_rating": 4.612,
+        "price_diversity": 0.431
+      },
+      "sample_products": [
+        {
+          "title": "Brickell Men's Retinol Skin Care Serum Treatment For Firming Face Lines & Eye Wrinkles, Deep Hydrating Facial Skincare Serum For Anti-Aging, Fragrance Free, 1 Ounce",
+          "price": 32.0,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "Beauty of Joseon Glow Serum Propolis and Niacinamide Hydrating Facial Soothing Moisturizer for Irritated Uneven Skin Tone, Korean Skin Care, 60ml, 2 Fl.Oz",
+          "price": 14.4,
+          "rating": 4.7,
+          "category": "cleanser"
+        },
+        {
+          "title": "The Ordinary Niacinamide 10% + Zinc 1%, Smoothing Serum for Blemish-Prone Skin",
+          "price": 6.0,
+          "rating": 4.7,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "dry_skin",
+      "budget": 30,
+      "strategy": "random_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 1.0,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 1.0,
+        "average_rating": 4.35,
+        "price_diversity": 0.751
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Shine Control Matte Booster Face Primer & Serum, Skin-Mattifying Serum-to-Primer with Rice Protein, Absorbs Excess Oil & Keeps Skin Shine Free, 1.0 fl. oz",
+          "price": 11.09,
+          "rating": 4.0,
+          "category": "treatment"
+        },
+        {
+          "title": "PURA D'OR 16 Oz ORGANIC Aloe Vera Gel - Lavender - All Natural - ZERO Artificial Preservatives - Deeply Hydrating & Moisturizing - Sunburn, Bug Bites, Rashes, Small Cuts, Eczema Relief - Skin & Hair",
+          "price": 11.23,
+          "rating": 4.3,
+          "category": "treatment"
+        },
+        {
+          "title": "SeoulCeuticals Korean Skin Care Korean- 20% Vitamin C Hyaluronic Acid Serum + CE Ferulic Acid - Potent Anti Aging, Anti Wrinkle Korean Beauty 1oz",
+          "price": 15.98,
+          "rating": 4.3,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "dry_skin",
+      "budget": 30,
+      "strategy": "top_rated_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.625,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.667,
+        "average_rating": 4.85,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Seborrheic Dermatitis & Psoriasis Face Cream: Dermatitis Treatment Cream for Fungal Acne, Soothes Redness & Flaking on Face, Scalp & Chest - with 12 Plant-Based Ingredients, Steroid-Free",
+          "price": 19.99,
+          "rating": 4.9,
+          "category": "treatment"
+        },
+        {
+          "title": "TXA+Niacinamide 15% Glow Facial Serum - Dark Spot remover for face Serum for Uneven Skin Tone, Texture and Hydration After Spot Care, High-Potency Tranexamic Acid Niacinamide Serum (50ml /1.69 fl.oz)",
+          "price": 29.99,
+          "rating": 4.9,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "dry_skin",
+      "budget": 30,
+      "strategy": "condition_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 1.0,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.667,
+        "average_rating": 4.812,
+        "price_diversity": 0.224
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Aquaphor Healing Ointment, Advanced Therapy Skin Protectant, Multi-Purpose Healing Ointment and Body Moisturizer, Holiday Gifts for Self Care, 14 Oz Jar",
+          "price": 13.95,
+          "rating": 4.8,
+          "category": "moisturizer"
+        },
+        {
+          "title": "Dove Body Wash Deep Moisture for 24hr Lotion-Soft Skin Moisture Moisturizing Skin Cleanser with No Sulfates No Parabens 30.6 oz",
+          "price": 7.97,
+          "rating": 4.8,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "dry_skin",
+      "budget": 30,
+      "strategy": "budget_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 1.0,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 1.0,
+        "average_rating": 4.812,
+        "price_diversity": 0.413
+      },
+      "sample_products": [
+        {
+          "title": "Dove Body Wash Deep Moisture for 24hr Lotion-Soft Skin Moisture Moisturizing Skin Cleanser with No Sulfates No Parabens 30.6 oz",
+          "price": 7.97,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "Dove Body Wash with Pump Sensitive Skin For 24hr Lotion-Soft Skin Moisturizing Skin Cleanser Gentle Hypoallergenic Formula with No Sulfates No Parabens 30.6 oz",
+          "price": 7.99,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "Gillette Venus Satin Care Dry Skin Shave Gel for Women, 6 Count, 7oz Each, Infused with Shea Butter for a Comfortable Shave",
+          "price": 24.99,
+          "rating": 4.8,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "oily_skin",
+      "budget": 30,
+      "strategy": "random_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.5,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 1.0,
+        "average_rating": 4.35,
+        "price_diversity": 0.751
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Shine Control Matte Booster Face Primer & Serum, Skin-Mattifying Serum-to-Primer with Rice Protein, Absorbs Excess Oil & Keeps Skin Shine Free, 1.0 fl. oz",
+          "price": 11.09,
+          "rating": 4.0,
+          "category": "treatment"
+        },
+        {
+          "title": "PURA D'OR 16 Oz ORGANIC Aloe Vera Gel - Lavender - All Natural - ZERO Artificial Preservatives - Deeply Hydrating & Moisturizing - Sunburn, Bug Bites, Rashes, Small Cuts, Eczema Relief - Skin & Hair",
+          "price": 11.23,
+          "rating": 4.3,
+          "category": "treatment"
+        },
+        {
+          "title": "SeoulCeuticals Korean Skin Care Korean- 20% Vitamin C Hyaluronic Acid Serum + CE Ferulic Acid - Potent Anti Aging, Anti Wrinkle Korean Beauty 1oz",
+          "price": 15.98,
+          "rating": 4.3,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "oily_skin",
+      "budget": 30,
+      "strategy": "top_rated_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.375,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.667,
+        "average_rating": 4.85,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Seborrheic Dermatitis & Psoriasis Face Cream: Dermatitis Treatment Cream for Fungal Acne, Soothes Redness & Flaking on Face, Scalp & Chest - with 12 Plant-Based Ingredients, Steroid-Free",
+          "price": 19.99,
+          "rating": 4.9,
+          "category": "treatment"
+        },
+        {
+          "title": "TXA+Niacinamide 15% Glow Facial Serum - Dark Spot remover for face Serum for Uneven Skin Tone, Texture and Hydration After Spot Care, High-Potency Tranexamic Acid Niacinamide Serum (50ml /1.69 fl.oz)",
+          "price": 29.99,
+          "rating": 4.9,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "oily_skin",
+      "budget": 30,
+      "strategy": "condition_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.625,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.667,
+        "average_rating": 4.8,
+        "price_diversity": 0.274
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Makeup Remover Wipes Micellar Alcohol-Free Face Towelettes Remove Waterproof Mascara & Oil, Compostable 100% Plant-Based Cloth, Dermatologist & Ophthalmologist Tested, Twin Pack 2 x 25 ct",
+          "price": 9.47,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "CeraVe Foaming Facial Cleanser, Daily Face Wash for Oily Skin, Hyaluronic Acid + Ceramides + Niacinamide, Fragrance Free & Paraben Free, Non-Drying Oil Control Face Wash, 16 Fluid Ounces",
+          "price": 15.97,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "CeraVe Foaming Facial Cleanser, Daily Face Wash for Oily Skin, Hyaluronic Acid + Ceramides + Niacinamide, Fragrance Free & Paraben Free, Non-Drying Oil Control Face Wash, 19 Fluid Ounce",
+          "price": 15.96,
+          "rating": 4.8,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "oily_skin",
+      "budget": 30,
+      "strategy": "budget_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.875,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 1.0,
+        "average_rating": 4.775,
+        "price_diversity": 0.418
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Makeup Remover Wipes Micellar Alcohol-Free Face Towelettes Remove Waterproof Mascara & Oil, Compostable 100% Plant-Based Cloth, Dermatologist & Ophthalmologist Tested, Twin Pack 2 x 25 ct",
+          "price": 9.47,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "CeraVe Foaming Facial Cleanser, Daily Face Wash for Oily Skin, Hyaluronic Acid + Ceramides + Niacinamide, Fragrance Free & Paraben Free, Non-Drying Oil Control Face Wash, 16 Fluid Ounces",
+          "price": 15.97,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "The Ordinary Niacinamide 10% + Zinc 1%, Smoothing Serum for Blemish-Prone Skin",
+          "price": 6.0,
+          "rating": 4.7,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "sensitive_skin",
+      "budget": 35,
+      "strategy": "random_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.375,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 0.75,
+        "average_rating": 4.35,
+        "price_diversity": 0.751
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Shine Control Matte Booster Face Primer & Serum, Skin-Mattifying Serum-to-Primer with Rice Protein, Absorbs Excess Oil & Keeps Skin Shine Free, 1.0 fl. oz",
+          "price": 11.09,
+          "rating": 4.0,
+          "category": "treatment"
+        },
+        {
+          "title": "PURA D'OR 16 Oz ORGANIC Aloe Vera Gel - Lavender - All Natural - ZERO Artificial Preservatives - Deeply Hydrating & Moisturizing - Sunburn, Bug Bites, Rashes, Small Cuts, Eczema Relief - Skin & Hair",
+          "price": 11.23,
+          "rating": 4.3,
+          "category": "treatment"
+        },
+        {
+          "title": "SeoulCeuticals Korean Skin Care Korean- 20% Vitamin C Hyaluronic Acid Serum + CE Ferulic Acid - Potent Anti Aging, Anti Wrinkle Korean Beauty 1oz",
+          "price": 15.98,
+          "rating": 4.3,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "sensitive_skin",
+      "budget": 35,
+      "strategy": "top_rated_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.375,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.5,
+        "average_rating": 4.85,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Seborrheic Dermatitis & Psoriasis Face Cream: Dermatitis Treatment Cream for Fungal Acne, Soothes Redness & Flaking on Face, Scalp & Chest - with 12 Plant-Based Ingredients, Steroid-Free",
+          "price": 19.99,
+          "rating": 4.9,
+          "category": "treatment"
+        },
+        {
+          "title": "TXA+Niacinamide 15% Glow Facial Serum - Dark Spot remover for face Serum for Uneven Skin Tone, Texture and Hydration After Spot Care, High-Potency Tranexamic Acid Niacinamide Serum (50ml /1.69 fl.oz)",
+          "price": 29.99,
+          "rating": 4.9,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "sensitive_skin",
+      "budget": 35,
+      "strategy": "condition_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.625,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.25,
+        "average_rating": 4.8,
+        "price_diversity": 0.323
+      },
+      "sample_products": [
+        {
+          "title": "Pampers Baby Wipes Sensitive, Water Based Hypoallergenic and Unscented 504 Total (6 Flip-Top Packs)",
+          "price": 17.97,
+          "rating": 4.8,
+          "category": "other"
+        },
+        {
+          "title": "Huggies Natural Care Sensitive Baby Wipes, Unscented, Hypoallergenic, 99% Purified Water, 12 Flip-Top Packs (768 Wipes Total), Packaging May Vary",
+          "price": 21.67,
+          "rating": 4.8,
+          "category": "other"
+        },
+        {
+          "title": "Neutrogena Makeup Remover Wipes Micellar Alcohol-Free Face Towelettes Remove Waterproof Mascara & Oil, Compostable 100% Plant-Based Cloth, Dermatologist & Ophthalmologist Tested, Twin Pack 2 x 25 ct",
+          "price": 9.47,
+          "rating": 4.8,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "sensitive_skin",
+      "budget": 35,
+      "strategy": "budget_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.75,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 1.0,
+        "average_rating": 4.737,
+        "price_diversity": 0.337
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Makeup Remover Wipes Micellar Alcohol-Free Face Towelettes Remove Waterproof Mascara & Oil, Compostable 100% Plant-Based Cloth, Dermatologist & Ophthalmologist Tested, Twin Pack 2 x 25 ct",
+          "price": 9.47,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "CeraVe Foaming Facial Cleanser, Daily Face Wash for Oily Skin, Hyaluronic Acid + Ceramides + Niacinamide, Fragrance Free & Paraben Free, Non-Drying Oil Control Face Wash, 16 Fluid Ounces",
+          "price": 15.97,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "Good Molecules Hyaluronic Acid Serum - 1% Hyaluronic Acid Non-greasy Ultra Hydrating Serum, Facial Moisturizer for Plumper Skin, Skin Care for Face",
+          "price": 5.97,
+          "rating": 4.7,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "melasma",
+      "budget": 40,
+      "strategy": "random_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.625,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 0.75,
+        "average_rating": 4.35,
+        "price_diversity": 0.751
+      },
+      "sample_products": [
+        {
+          "title": "Neutrogena Shine Control Matte Booster Face Primer & Serum, Skin-Mattifying Serum-to-Primer with Rice Protein, Absorbs Excess Oil & Keeps Skin Shine Free, 1.0 fl. oz",
+          "price": 11.09,
+          "rating": 4.0,
+          "category": "treatment"
+        },
+        {
+          "title": "PURA D'OR 16 Oz ORGANIC Aloe Vera Gel - Lavender - All Natural - ZERO Artificial Preservatives - Deeply Hydrating & Moisturizing - Sunburn, Bug Bites, Rashes, Small Cuts, Eczema Relief - Skin & Hair",
+          "price": 11.23,
+          "rating": 4.3,
+          "category": "treatment"
+        },
+        {
+          "title": "SeoulCeuticals Korean Skin Care Korean- 20% Vitamin C Hyaluronic Acid Serum + CE Ferulic Acid - Potent Anti Aging, Anti Wrinkle Korean Beauty 1oz",
+          "price": 15.98,
+          "rating": 4.3,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "melasma",
+      "budget": 40,
+      "strategy": "top_rated_products",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.375,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 0.5,
+        "average_rating": 4.85,
+        "price_diversity": 0.412
+      },
+      "sample_products": [
+        {
+          "title": "Aquaphor Baby Healing Ointment Advanced Therapy Skin Protectant, Dry Skin and Diaper Rash Ointment, Holiday Baby Gifts, 7 Oz Tube",
+          "price": 9.51,
+          "rating": 4.9,
+          "category": "other"
+        },
+        {
+          "title": "Seborrheic Dermatitis & Psoriasis Face Cream: Dermatitis Treatment Cream for Fungal Acne, Soothes Redness & Flaking on Face, Scalp & Chest - with 12 Plant-Based Ingredients, Steroid-Free",
+          "price": 19.99,
+          "rating": 4.9,
+          "category": "treatment"
+        },
+        {
+          "title": "TXA+Niacinamide 15% Glow Facial Serum - Dark Spot remover for face Serum for Uneven Skin Tone, Texture and Hydration After Spot Care, High-Potency Tranexamic Acid Niacinamide Serum (50ml /1.69 fl.oz)",
+          "price": 29.99,
+          "rating": 4.9,
+          "category": "treatment"
+        }
+      ]
+    },
+    {
+      "condition": "melasma",
+      "budget": 40,
+      "strategy": "condition_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.625,
+        "budget_fit_rate": 0.875,
+        "category_coverage": 0.75,
+        "average_rating": 4.725,
+        "price_diversity": 0.548
+      },
+      "sample_products": [
+        {
+          "title": "Eight Saints Daydreamer Soothing Anti Aging Face Moisturizer, Natural & Organic Fast Absorbing Oil Free Face Lotion With Hyaluronic Acid & Vitamin E, Hydrating Daily Facial Moisturizer, 2 Ounces",
+          "price": 25.6,
+          "rating": 4.8,
+          "category": "moisturizer"
+        },
+        {
+          "title": "ANAI RUI 10% Tranexamic Acid Serum with Niacinamide,Kojic Acid,Ceramide, Skin Refining, for All Skin Types 1.69 FL.Oz/50 ML",
+          "price": 14.73,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "IMAGE Skincare, VITAL C Hydrating Face Serum, with Vitamin C and Hyaluronic Acid, to Brighten, Tone and Smooth Appearance of Wrinkle",
+          "price": 66.0,
+          "rating": 4.7,
+          "category": "cleanser"
+        }
+      ]
+    },
+    {
+      "condition": "melasma",
+      "budget": 40,
+      "strategy": "budget_aware_recommender",
+      "product_count": 8,
+      "metrics": {
+        "top_k_relevance": 0.75,
+        "budget_fit_rate": 1.0,
+        "category_coverage": 1.0,
+        "average_rating": 4.688,
+        "price_diversity": 0.331
+      },
+      "sample_products": [
+        {
+          "title": "ANAI RUI 10% Tranexamic Acid Serum with Niacinamide,Kojic Acid,Ceramide, Skin Refining, for All Skin Types 1.69 FL.Oz/50 ML",
+          "price": 14.73,
+          "rating": 4.8,
+          "category": "cleanser"
+        },
+        {
+          "title": "Mad Hippie Super A Retinol Serum for Face \u2013 Potent Skin Repair & Anti-Aging Serum with 3 Retinoids, Bakuchiol + Hydrating Hyaluronic Acid, 1.02 Oz",
+          "price": 27.19,
+          "rating": 4.7,
+          "category": "cleanser"
+        },
+        {
+          "title": "Eight Saints Original Cin, 10% Niacinamide Serum For Face Anti Aging, Natural and Organic, Facial Serum to Reduce Fine Lines, Dark Spots, Large Pores, and Wrinkles, 1oz",
+          "price": 30.4,
+          "rating": 4.7,
+          "category": "treatment"
+        }
+      ]
+    }
+  ]
+}

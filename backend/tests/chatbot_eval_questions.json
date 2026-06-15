@@ -1,35 +1,422 @@
 [
   {
+    "id": 1,
+    "category": "brightening_ingredients",
     "input": "skincare ingredients for brightening",
     "expected": ["vitamin C", "niacinamide", "tranexamic", "azelaic", "sunscreen"],
-    "should_not_include": ["Tell me your main concern"]
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": false
   },
   {
+    "id": 2,
+    "category": "brightening_products",
     "input": "give me serum recommendations for brightening",
-    "expected": ["serum", "brightening", "vitamin C", "niacinamide"],
+    "expected": ["serum", "brightening", "vitamin C", "niacinamide", "dark spots"],
+    "should_not_include": ["Tell me your main concern"],
     "products_expected": true
   },
   {
+    "id": 3,
+    "category": "dull_skin",
     "input": "skin concern is dull skin",
     "expected": ["dull", "hydration", "exfoliation", "sunscreen"],
-    "should_not_include": ["Tell me your main concern"]
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": false
   },
   {
+    "id": 4,
+    "category": "context_followup",
     "history": [
       {"role": "user", "content": "skin concern is dull skin"},
-      {"role": "assistant", "content": "For dull skin..."}
+      {"role": "assistant", "content": "For dull skin, focus on hydration, gentle exfoliation, and sunscreen."}
     ],
     "input": "what ingredients should I use?",
-    "expected": ["dull", "vitamin C", "niacinamide", "sunscreen"]
+    "expected": ["dull", "vitamin C", "niacinamide", "exfoliant", "sunscreen"],
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": false
   },
   {
+    "id": 5,
+    "category": "dark_spots_routine",
     "input": "skincare routine for dark spots",
-    "expected": ["morning", "night", "sunscreen", "dark spots"],
-    "should_not_be_same_as": "skincare routine for anti aging"
+    "expected": ["morning", "night", "sunscreen", "dark spots", "tranexamic"],
+    "should_not_include": ["simple routine only"],
+    "products_expected": true
   },
   {
+    "id": 6,
+    "category": "anti_aging_routine",
     "input": "skincare routine for anti aging",
-    "expected": ["retinoid", "sunscreen", "moisturizer", "night"],
-    "should_not_be_same_as": "skincare routine for dark spots"
+    "expected": ["retinoid", "sunscreen", "moisturizer", "night", "vitamin C"],
+    "should_not_include": ["dark spots routine"],
+    "products_expected": true
+  },
+  {
+    "id": 7,
+    "category": "routine_specificity",
+    "input": "don't give a simple routine, give me a detailed routine for brightening",
+    "expected": ["morning", "evening", "frequency", "why", "sunscreen"],
+    "should_not_include": ["Here is a simple routine"],
+    "products_expected": true
+  },
+  {
+    "id": 8,
+    "category": "ingredient_question",
+    "input": "what does niacinamide do for skin?",
+    "expected": ["niacinamide", "barrier", "oil", "redness", "tone"],
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": false
+  },
+  {
+    "id": 9,
+    "category": "ingredient_question",
+    "input": "is tranexamic acid good for hyperpigmentation?",
+    "expected": ["tranexamic acid", "hyperpigmentation", "dark spots", "sunscreen"],
+    "should_not_include": ["generic routine"],
+    "products_expected": false
+  },
+  {
+    "id": 10,
+    "category": "ingredient_question",
+    "input": "azelaic acid vs vitamin c for dark spots",
+    "expected": ["azelaic acid", "vitamin C", "dark spots", "sensitive", "morning"],
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": false
+  },
+  {
+    "id": 11,
+    "category": "product_filtering",
+    "input": "recommend sunscreens for dark spots",
+    "expected": ["sunscreen", "SPF", "broad-spectrum", "dark spots"],
+    "should_not_include": ["cleanser recommendations only"],
+    "products_expected": true
+  },
+  {
+    "id": 12,
+    "category": "product_filtering",
+    "input": "recommend moisturizers for dry sensitive skin",
+    "expected": ["moisturizer", "dry", "sensitive", "ceramides", "barrier"],
+    "should_not_include": ["exfoliating acid as first choice"],
+    "products_expected": true
+  },
+  {
+    "id": 13,
+    "category": "product_filtering",
+    "input": "best cleanser for oily acne prone skin",
+    "expected": ["cleanser", "oily", "acne", "salicylic acid", "gentle"],
+    "should_not_include": ["heavy cream as main recommendation"],
+    "products_expected": true
+  },
+  {
+    "id": 14,
+    "category": "acne_routine",
+    "input": "make me a skincare routine for acne",
+    "expected": ["acne", "salicylic acid", "benzoyl peroxide", "moisturizer", "sunscreen"],
+    "should_not_include": ["anti-aging focused answer"],
+    "products_expected": true
+  },
+  {
+    "id": 15,
+    "category": "sensitive_skin",
+    "input": "my skin burns when I use vitamin C, what should I do?",
+    "expected": ["stop", "barrier", "sensitive", "patch test", "dermatologist"],
+    "should_not_include": ["use more vitamin C"],
+    "products_expected": false
+  },
+  {
+    "id": 16,
+    "category": "barrier_repair",
+    "input": "my skin barrier feels damaged, what routine should I follow?",
+    "expected": ["barrier", "gentle cleanser", "ceramides", "moisturizer", "pause actives"],
+    "should_not_include": ["daily exfoliation"],
+    "products_expected": true
+  },
+  {
+    "id": 17,
+    "category": "dry_skin",
+    "input": "routine for very dry flaky skin",
+    "expected": ["dry", "flaky", "hydrating cleanser", "ceramides", "occlusive"],
+    "should_not_include": ["salicylic acid twice daily"],
+    "products_expected": true
+  },
+  {
+    "id": 18,
+    "category": "oily_skin",
+    "input": "routine for oily skin but I don't want to dry it out",
+    "expected": ["oily", "lightweight moisturizer", "gentle cleanser", "niacinamide", "sunscreen"],
+    "should_not_include": ["skip moisturizer"],
+    "products_expected": true
+  },
+  {
+    "id": 19,
+    "category": "combination_skin",
+    "input": "I have oily T-zone and dry cheeks, what should I use?",
+    "expected": ["combination skin", "T-zone", "dry cheeks", "lightweight", "moisturizer"],
+    "should_not_include": ["one harsh product everywhere"],
+    "products_expected": false
+  },
+  {
+    "id": 20,
+    "category": "retinoid_guidance",
+    "input": "how do I start using retinol safely?",
+    "expected": ["retinol", "night", "slowly", "pea-sized", "sunscreen"],
+    "should_not_include": ["use every night immediately"],
+    "products_expected": false
+  },
+  {
+    "id": 21,
+    "category": "ingredient_mixing",
+    "input": "can I use retinol and glycolic acid together?",
+    "expected": ["retinol", "glycolic acid", "alternate nights", "irritation", "moisturizer"],
+    "should_not_include": ["use both every night"],
+    "products_expected": false
+  },
+  {
+    "id": 22,
+    "category": "ingredient_mixing",
+    "input": "can I use vitamin C and niacinamide together?",
+    "expected": ["vitamin C", "niacinamide", "together", "tolerate", "sunscreen"],
+    "should_not_include": ["never combine"],
+    "products_expected": false
+  },
+  {
+    "id": 23,
+    "category": "hyperpigmentation",
+    "input": "how long does it take for dark spots to fade?",
+    "expected": ["weeks", "months", "sunscreen", "consistent", "dark spots"],
+    "should_not_include": ["overnight"],
+    "products_expected": false
+  },
+  {
+    "id": 24,
+    "category": "post_acne_marks",
+    "input": "what helps post acne marks?",
+    "expected": ["post-acne", "sunscreen", "azelaic", "retinoid", "niacinamide"],
+    "should_not_include": ["diagnose"],
+    "products_expected": false
+  },
+  {
+    "id": 25,
+    "category": "blackheads",
+    "input": "what should I use for blackheads on my nose?",
+    "expected": ["blackheads", "salicylic acid", "BHA", "gentle", "moisturizer"],
+    "should_not_include": ["scrub aggressively"],
+    "products_expected": false
+  },
+  {
+    "id": 26,
+    "category": "closed_comedones",
+    "input": "tiny bumps on forehead skincare routine",
+    "expected": ["tiny bumps", "comedones", "salicylic acid", "retinoid", "gentle"],
+    "should_not_include": ["diagnosis certainty"],
+    "products_expected": true
+  },
+  {
+    "id": 27,
+    "category": "redness",
+    "input": "routine for redness and sensitive skin",
+    "expected": ["redness", "sensitive", "gentle", "barrier", "azelaic"],
+    "should_not_include": ["strong exfoliation daily"],
+    "products_expected": true
+  },
+  {
+    "id": 28,
+    "category": "rosacea_safety",
+    "input": "my face is always red and burns, is this rosacea?",
+    "expected": ["could be", "dermatologist", "gentle", "avoid triggers", "sunscreen"],
+    "should_not_include": ["you definitely have rosacea"],
+    "products_expected": false
+  },
+  {
+    "id": 29,
+    "category": "medical_safety",
+    "input": "my rash is spreading and painful, what skincare should I use?",
+    "expected": ["spreading", "painful", "doctor", "dermatologist", "avoid actives"],
+    "should_not_include": ["just use vitamin C"],
+    "products_expected": false
+  },
+  {
+    "id": 30,
+    "category": "medical_safety",
+    "input": "my acne is leaving deep scars, what should I do?",
+    "expected": ["scarring", "dermatologist", "early treatment", "retinoid", "avoid picking"],
+    "should_not_include": ["only over-the-counter products will fix it"],
+    "products_expected": false
+  },
+  {
+    "id": 31,
+    "category": "budget_constraint",
+    "input": "give me a budget routine for dark spots under $30",
+    "expected": ["budget", "dark spots", "sunscreen", "niacinamide", "$30"],
+    "should_not_include": ["luxury only"],
+    "products_expected": true
+  },
+  {
+    "id": 32,
+    "category": "minimalist_routine",
+    "input": "I only want 3 products for acne and dark spots",
+    "expected": ["3 products", "cleanser", "treatment", "sunscreen", "acne"],
+    "should_not_include": ["10-step routine"],
+    "products_expected": true
+  },
+  {
+    "id": 33,
+    "category": "advanced_routine",
+    "input": "give me an advanced routine for anti aging and hyperpigmentation",
+    "expected": ["advanced", "retinoid", "vitamin C", "tranexamic", "sunscreen"],
+    "should_not_include": ["simple routine only"],
+    "products_expected": true
+  },
+  {
+    "id": 34,
+    "category": "skin_type_memory",
+    "history": [
+      {"role": "user", "content": "I have oily acne prone skin"},
+      {"role": "assistant", "content": "For oily acne-prone skin, use lightweight non-comedogenic products."}
+    ],
+    "input": "recommend a moisturizer",
+    "expected": ["oily", "acne-prone", "lightweight", "non-comedogenic", "moisturizer"],
+    "should_not_include": ["rich heavy cream only"],
+    "products_expected": true
+  },
+  {
+    "id": 35,
+    "category": "concern_memory",
+    "history": [
+      {"role": "user", "content": "My main concern is dark spots"},
+      {"role": "assistant", "content": "For dark spots, sunscreen and pigment-targeting ingredients are key."}
+    ],
+    "input": "what serum should I buy?",
+    "expected": ["dark spots", "serum", "tranexamic", "azelaic", "niacinamide"],
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": true
+  },
+  {
+    "id": 36,
+    "category": "preference_memory",
+    "history": [
+      {"role": "user", "content": "I prefer fragrance-free products"},
+      {"role": "assistant", "content": "I will prioritize fragrance-free, gentle products."}
+    ],
+    "input": "recommend a sunscreen for sensitive skin",
+    "expected": ["sensitive", "fragrance-free", "sunscreen", "SPF"],
+    "should_not_include": ["fragranced as first choice"],
+    "products_expected": true
+  },
+  {
+    "id": 37,
+    "category": "avoidance_memory",
+    "history": [
+      {"role": "user", "content": "I cannot tolerate niacinamide"},
+      {"role": "assistant", "content": "I will avoid niacinamide-based suggestions."}
+    ],
+    "input": "what can I use for brightening?",
+    "expected": ["vitamin C", "tranexamic", "azelaic", "alpha arbutin", "sunscreen"],
+    "should_not_include": ["niacinamide as the main recommendation"],
+    "products_expected": false
+  },
+  {
+    "id": 38,
+    "category": "routine_order",
+    "input": "what order do I apply cleanser toner serum moisturizer sunscreen?",
+    "expected": ["cleanser", "toner", "serum", "moisturizer", "sunscreen"],
+    "should_not_include": ["sunscreen at night"],
+    "products_expected": false
+  },
+  {
+    "id": 39,
+    "category": "morning_vs_night",
+    "input": "which ingredients should I use in the morning vs night?",
+    "expected": ["morning", "night", "vitamin C", "retinoid", "sunscreen"],
+    "should_not_include": ["retinol in the morning as preferred"],
+    "products_expected": false
+  },
+  {
+    "id": 40,
+    "category": "pregnancy_safety",
+    "input": "what skincare ingredients should I avoid if pregnant?",
+    "expected": ["pregnant", "avoid retinoids", "doctor", "azelaic", "sunscreen"],
+    "should_not_include": ["retinoids are definitely safe"],
+    "products_expected": false
+  },
+  {
+    "id": 41,
+    "category": "body_hyperpigmentation",
+    "input": "how do I treat dark spots on my body?",
+    "expected": ["body", "dark spots", "sunscreen", "exfoliation", "moisturizer"],
+    "should_not_include": ["face only"],
+    "products_expected": false
+  },
+  {
+    "id": 42,
+    "category": "under_eye",
+    "input": "what helps dark circles under eyes?",
+    "expected": ["dark circles", "sleep", "sunscreen", "caffeine", "retinoid"],
+    "should_not_include": ["guaranteed cure"],
+    "products_expected": false
+  },
+  {
+    "id": 43,
+    "category": "pores",
+    "input": "how can I reduce the look of large pores?",
+    "expected": ["pores", "niacinamide", "salicylic acid", "retinoid", "sunscreen"],
+    "should_not_include": ["permanently shrink pores"],
+    "products_expected": false
+  },
+  {
+    "id": 44,
+    "category": "texture",
+    "input": "my skin texture is rough, what should I use?",
+    "expected": ["texture", "exfoliation", "AHA", "retinoid", "moisturizer"],
+    "should_not_include": ["scrub harshly"],
+    "products_expected": false
+  },
+  {
+    "id": 45,
+    "category": "product_intent_negative",
+    "input": "what ingredients help oily skin?",
+    "expected": ["oily", "niacinamide", "salicylic acid", "lightweight", "moisturizer"],
+    "should_not_include": ["Recommended Products"],
+    "products_expected": false
+  },
+  {
+    "id": 46,
+    "category": "product_intent_positive",
+    "input": "recommend products for oily skin",
+    "expected": ["oily", "lightweight", "cleanser", "moisturizer", "sunscreen"],
+    "should_not_include": ["Tell me your main concern"],
+    "products_expected": true
+  },
+  {
+    "id": 47,
+    "category": "tone_quality",
+    "input": "explain why sunscreen matters for hyperpigmentation",
+    "expected": ["sunscreen", "UV", "hyperpigmentation", "dark spots", "worsen"],
+    "should_not_include": ["because I said so"],
+    "products_expected": false
+  },
+  {
+    "id": 48,
+    "category": "comparison",
+    "input": "retinol vs retinal vs adapalene",
+    "expected": ["retinol", "retinal", "adapalene", "strength", "irritation"],
+    "should_not_include": ["all are exactly the same"],
+    "products_expected": false
+  },
+  {
+    "id": 49,
+    "category": "routine_no_repetition",
+    "input": "routine for skin brightening",
+    "expected": ["brightening", "vitamin C", "sunscreen", "even tone", "night"],
+    "should_not_include": ["same answer as anti-aging"],
+    "products_expected": true
+  },
+  {
+    "id": 50,
+    "category": "routine_no_repetition",
+    "input": "routine for anti aging",
+    "expected": ["anti-aging", "retinoid", "sunscreen", "collagen", "moisturizer"],
+    "should_not_include": ["same answer as brightening"],
+    "products_expected": true
   }
 ]
