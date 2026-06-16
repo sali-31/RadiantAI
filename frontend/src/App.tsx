@@ -16,6 +16,9 @@ type TabState = 'dashboard' | 'analysis' | 'chat' | 'profile';
 const hasCognitoConfig = Boolean(
   import.meta.env.VITE_COGNITO_USER_POOL_ID && import.meta.env.VITE_COGNITO_CLIENT_ID
 );
+const allowDemoAuth = import.meta.env.VITE_ENABLE_DEMO_AUTH === 'true' || (
+  !import.meta.env.PROD && import.meta.env.VITE_ENABLE_DEMO_AUTH !== 'false'
+);
 
 const demoUser = {
   userId: 'local-demo-user',
@@ -48,7 +51,7 @@ function App() {
 
   async function checkUser() {
     if (!hasCognitoConfig) {
-      setUser(demoUser);
+      setUser(allowDemoAuth ? demoUser : null);
       setLoading(false);
       return;
     }
@@ -70,7 +73,7 @@ function App() {
       localStorage.removeItem('lesionrec_last_analysis');
       setCurrentView('dashboard');
       setActiveTab('dashboard');
-      setUser(demoUser);
+      setUser(allowDemoAuth ? demoUser : null);
       return;
     }
 
@@ -100,6 +103,10 @@ function App() {
   }
 
   if (!user) {
+    if (!hasCognitoConfig && !allowDemoAuth) {
+      return <AuthConfigurationRequired />;
+    }
+
     return <Auth onLoginSuccess={checkUser} />; 
   }
 
@@ -269,3 +276,19 @@ function App() {
 }
 
 export default App;
+
+const AuthConfigurationRequired = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+    <div className="max-w-lg rounded-xl border border-blue-100 bg-white p-6 text-center shadow-lg">
+      <h1 className="text-2xl font-bold text-gray-900">RadiantAI Authentication Required</h1>
+      <p className="mt-3 text-gray-600">
+        This production deployment needs Cognito configured in Vercel before users can sign in.
+      </p>
+      <div className="mt-5 rounded-lg bg-gray-50 p-4 text-left font-mono text-sm text-gray-700">
+        <p>VITE_COGNITO_USER_POOL_ID</p>
+        <p>VITE_COGNITO_CLIENT_ID</p>
+        <p>VITE_API_URL</p>
+      </div>
+    </div>
+  </div>
+);

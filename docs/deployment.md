@@ -1,38 +1,48 @@
 # Deployment Guide for RadiantAI
 
 This document outlines two deployment strategies:
-1.  **Option A: Render Blueprint (Recommended for MVP)** - Hosts both React and FastAPI on Render.
+1.  **Option A: Render + Vercel (Recommended for MVP)** - Hosts FastAPI on Render and React on Vercel.
 2.  **Option B: Google Cloud Platform (Enterprise)** - Full cloud-native deployment.
 
 ---
 
-# Option A: Render Blueprint (Quick Start)
+# Option A: Render + Vercel (Quick Start)
 
 This is the recommended path for rapid deployment and prototyping.
 
 ## Prerequisites
 -   GitHub Account
 -   [Render](https://render.com/) Account
+-   [Vercel](https://vercel.com/) Account
 -   AWS Account (S3) & Google Cloud Account (Gemini)
 
-## 1. Full Stack Deployment (Render)
+## 1. Backend Deployment (Render)
 
 1.  **Prepare**: Push the repo to GitHub with `render.yaml` at the repo root.
 2.  **Create Blueprint**:
     *   Go to Render Dashboard -> New + -> Blueprint.
     *   Connect your GitHub repo.
-    *   Render will create `radiantai-backend` and `radiantai-frontend`.
+    *   Render will create `radiantai-backend`.
 3.  **Environment Variables**:
     *   Required: `GOOGLE_API_KEY`.
     *   Optional for S3 uploads: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET_NAME`, `S3_UPLOAD_PREFIX`.
-4.  **URLs**:
-    *   Backend: `https://radiantai-backend.onrender.com`
-    *   Frontend: `https://radiantai-frontend.onrender.com`
-5.  **If Render changes the service URLs**:
-    *   Update frontend `VITE_API_URL`.
-    *   Update backend `BACKEND_PUBLIC_URL`.
-    *   Update backend `CORS_ORIGINS`.
-    *   Redeploy both services.
+4.  **Backend URL**: `https://radiantai-backend.onrender.com`
+
+## 2. Frontend Deployment and Auth (Vercel)
+
+1.  **Create Project**:
+    *   Go to Vercel Dashboard -> Add New Project.
+    *   Import the GitHub repo.
+    *   Set **Root Directory** to `frontend`.
+    *   Use the Vite framework preset.
+2.  **Environment Variables**:
+    *   `VITE_API_URL=https://radiantai-backend.onrender.com`
+    *   `VITE_COGNITO_USER_POOL_ID=your_cognito_user_pool_id`
+    *   `VITE_COGNITO_CLIENT_ID=your_cognito_app_client_id`
+3.  **Final Connection**:
+    *   Copy the Vercel frontend URL.
+    *   Update Render `CORS_ORIGINS` to include that Vercel URL.
+    *   Redeploy the Render backend.
 
 ---
 

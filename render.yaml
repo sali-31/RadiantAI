@@ -9,7 +9,7 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: https://radiantai-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173
+        value: https://frontend-beige-ten-70.vercel.app,https://frontend-o23msrg2f-sara-yousaf-s-projects.vercel.app,http://localhost:5173,http://127.0.0.1:5173
       - key: BACKEND_PUBLIC_URL
         value: https://radiantai-backend.onrender.com
       - key: ENABLE_LIVE_PRODUCT_SEARCH
@@ -24,17 +24,3 @@ services:
         sync: false
       - key: S3_UPLOAD_PREFIX
         value: uploads
-
-  - type: web
-    name: radiantai-frontend
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://radiantai-backend.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
