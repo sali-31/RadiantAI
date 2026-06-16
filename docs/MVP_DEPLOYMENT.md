@@ -7,7 +7,7 @@ This is the deployment story for the final GitHub MVP.
 ```text
 GitHub repo
   -> Render hosts FastAPI backend
-  -> Vercel hosts React frontend
+  -> Render hosts React frontend static site
   -> Google Gemini 2.5 Flash powers AI analysis and chat
   -> Product-grounded retrieval feeds Sephora, StyleKorean, Amazon, and Korean brand candidates into chat
   -> Local chat memory keeps user skin type, budget, concerns, allergies, and brand preferences
@@ -116,23 +116,33 @@ Minimum IAM actions for the MVP:
 }
 ```
 
-## 5. Render Backend Hosting
+## 5. Render Hosting
 
-The repo includes `render.yaml`.
+The repo includes `render.yaml`, which deploys both services from one Render Blueprint:
 
-Render should deploy the backend as:
+- `radiantai-backend`: FastAPI Docker web service from `backend/`
+- `radiantai-frontend`: Vite static site from `frontend/`
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. In Render, choose **New +** -> **Blueprint**.
+3. Connect the GitHub repo and let Render read `render.yaml`.
+4. Fill the secret environment variables when Render prompts for them.
+
+The backend is configured as:
 
 - service type: Web Service
 - environment: Docker
 - root directory: `backend`
 - health check path: `/`
 
-Render environment variables:
+Backend environment variables:
 
 ```env
 GOOGLE_API_KEY=your_google_ai_studio_api_key
-CORS_ORIGINS=https://your-vercel-app.vercel.app
-BACKEND_PUBLIC_URL=https://your-render-backend.onrender.com
+CORS_ORIGINS=https://radiantai-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173
+BACKEND_PUBLIC_URL=https://radiantai-backend.onrender.com
 ENABLE_LIVE_PRODUCT_SEARCH=true
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
@@ -141,39 +151,31 @@ S3_BUCKET_NAME=your_bucket_name
 S3_UPLOAD_PREFIX=uploads
 ```
 
+The frontend is configured as:
+
+- service type: Web Service
+- runtime: Static Site
+- root directory: `frontend`
+- build command: `npm ci && npm run build`
+- publish directory: `dist`
+
+Frontend environment variables:
+
+```env
+VITE_API_URL=https://radiantai-backend.onrender.com
+```
+
+If Render gives either service a different URL, update `VITE_API_URL`, `BACKEND_PUBLIC_URL`, and `CORS_ORIGINS` to use the real Render URLs, then redeploy.
+
 After deploy, test:
 
 ```text
-https://your-render-backend.onrender.com/
-https://your-render-backend.onrender.com/docs
+https://radiantai-backend.onrender.com/
+https://radiantai-backend.onrender.com/docs
+https://radiantai-frontend.onrender.com
 ```
 
-## 6. Vercel Frontend Hosting
-
-The frontend is a Vite React app in `frontend/`.
-
-Deploy it on Vercel with:
-
-- framework preset: Vite
-- root directory: `frontend`
-- build command: `npm run build`
-- output directory: `dist`
-
-Set this Vercel environment variable:
-
-```env
-VITE_API_URL=https://your-render-backend.onrender.com
-```
-
-After the frontend deploys, copy the Vercel URL and update Render:
-
-```env
-CORS_ORIGINS=https://your-vercel-app.vercel.app
-```
-
-Then redeploy the Render backend.
-
-## 7. GitHub MVP Checklist
+## 6. GitHub MVP Checklist
 
 Before presenting:
 
@@ -191,4 +193,5 @@ Before presenting:
 - Google Gemini API keys: https://ai.google.dev/gemini-api/docs/api-key
 - Google Vision setup: https://docs.cloud.google.com/vision/docs/setup
 - Amazon S3 getting started: https://docs.aws.amazon.com/AmazonS3/latest/userguide/GetStartedWithS3.html
-- Vercel environment variables: https://vercel.com/docs/environment-variables
+- Render Blueprints: https://render.com/docs/blueprint-spec
+- Render static sites: https://render.com/docs/static-sites

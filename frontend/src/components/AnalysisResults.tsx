@@ -25,7 +25,8 @@ interface DiagnosisData {
 }
 
 export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
-    const [imageUrl, setImageUrl] = useState(data.s3_path);
+    const [imageUrl, setImageUrl] = useState<string | null>(data.s3_path || null);
+    const [imageFailed, setImageFailed] = useState(!data.s3_path);
 
     // Effect to refresh the URL if it might be expired
     useEffect(() => {
@@ -44,11 +45,15 @@ export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
                     
                     if (response.ok) {
                         const result = await response.json();
-                        setImageUrl(result.url);
+                        setImageUrl(result.url || null);
+                        setImageFailed(!result.url);
+                    } else {
+                        setImageFailed(true);
                     }
                 }
             } catch (error) {
                 console.error("Failed to refresh image URL:", error);
+                setImageFailed(true);
             }
         };
 
@@ -87,15 +92,23 @@ export const AnalysisResults = ({ data, onBack, onViewProducts }: Props) => {
                 <div className="flex flex-col xl:flex-row">
                     {/* Left Column: Image (Sticky on Desktop) */}
                     <div className="w-full xl:w-1/2 bg-gray-50 p-6 md:p-10 flex flex-col items-center justify-center border-b xl:border-b-0 xl:border-r border-gray-200">
-                        <div className="relative w-full max-w-2xl aspect-4/3 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <img 
-                                src={imageUrl} 
-                                alt="Analyzed Skin" 
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                    e.currentTarget.src = 'https://placehold.co/600x400?text=Image+Protected';
-                                }}
-                            />
+                        <div className="relative w-full max-w-2xl aspect-[4/3] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            {imageUrl && !imageFailed ? (
+                                <img 
+                                    src={imageUrl} 
+                                    alt="Analyzed Skin" 
+                                    className="w-full h-full object-contain"
+                                    onError={() => setImageFailed(true)}
+                                />
+                            ) : (
+                                <div className="h-full min-h-[360px] w-full flex flex-col items-center justify-center bg-slate-50 px-6 text-center text-slate-500">
+                                    <div className="text-4xl mb-3">🛡️</div>
+                                    <p className="font-semibold text-slate-700">Image preview unavailable</p>
+                                    <p className="mt-2 max-w-sm text-sm">
+                                        The analysis is saved, but the uploaded image URL is no longer available. Configure S3 for persistent hosted previews.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div className="mt-6 flex items-center text-sm text-gray-500 bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">
                             <span className="mr-2">🛡️</span>

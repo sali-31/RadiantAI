@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY src/ ./src/
-COPY data/*.csv ./data/
+COPY data/ ./data/
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

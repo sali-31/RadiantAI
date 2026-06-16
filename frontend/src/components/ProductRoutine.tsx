@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import type { Product } from '../types';
 
 interface Props {
@@ -57,13 +57,8 @@ export const ProductRoutine = ({ products }: Props) => {
                             Step {index + 1}: {getStep(product)}
                         </div>
 
-
                         <div className="h-32 flex items-center justify-center mb-3 mt-5 bg-gray-50 rounded-md overflow-hidden">
-                            {product.thumbnail || product.image_url ? (
-                                <img src={product.thumbnail || product.image_url} alt={product.name || product.title || 'Product'} className="max-h-full max-w-full object-contain" />
-                            ) : (
-                                <div className="text-gray-400 text-sm">No Image</div>
-                            )}
+                            <RoutineProductImage product={product} />
                         </div>
 
 
@@ -97,6 +92,33 @@ export const ProductRoutine = ({ products }: Props) => {
                     </div>
                 ))}
             </div>
+        </div>
+    );
+};
+
+const RoutineProductImage = ({ product }: { product: Product }) => {
+    const [imageFailed, setImageFailed] = useState(false);
+    const imageSrc = product.thumbnail || product.image_url;
+    const title = product.name || product.title || 'Product';
+    const retailer = product.retailer || product.source || product.data_source;
+    const label = product.brand || retailer || product.category || 'Product';
+
+    if (imageSrc && !imageFailed) {
+        return (
+            <img
+                src={imageSrc}
+                alt={title}
+                referrerPolicy="no-referrer"
+                onError={() => setImageFailed(true)}
+                className="max-h-full max-w-full object-contain"
+            />
+        );
+    }
+
+    return (
+        <div className="h-full w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-blue-50 px-3 text-center">
+            <span className="text-xl font-bold text-blue-700">{label[0] || title[0]}</span>
+            <span className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</span>
         </div>
     );
 };

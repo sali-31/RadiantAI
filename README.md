@@ -47,7 +47,7 @@ RadiantAI addresses these challenges by:
   - Secure image upload
   - Interactive dashboard for results
   - Embedded chatbot interface
-- Deployment-ready configuration using Vercel
+- Deployment-ready configuration using Render
 
 ### Backend
 - Language: Python
@@ -257,7 +257,7 @@ This feature will allow users to turn their recommended product routines into sh
 
 ### MVP Deployment
 
-For the final hosted MVP setup using FastAPI, Gemini, optional Google Vision, AWS S3, Render, and Vercel, see:
+For the final hosted MVP setup using FastAPI, Gemini, optional Google Vision, AWS S3, and Render, see:
 
 - [`docs/MVP_DEPLOYMENT.md`](docs/MVP_DEPLOYMENT.md)
 

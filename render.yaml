@@ -1,7 +1,7 @@
 services:
   - type: web
     name: radiantai-backend
-    env: docker
+    runtime: docker
     rootDir: backend
     plan: free
     healthCheckPath: /
@@ -9,9 +9,9 @@ services:
       - key: GOOGLE_API_KEY
         sync: false
       - key: CORS_ORIGINS
-        value: http://localhost:5173
+        value: https://radiantai-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173
       - key: BACKEND_PUBLIC_URL
-        sync: false
+        value: https://radiantai-backend.onrender.com
       - key: ENABLE_LIVE_PRODUCT_SEARCH
         value: true
       - key: AWS_ACCESS_KEY_ID
@@ -24,3 +24,17 @@ services:
         sync: false
       - key: S3_UPLOAD_PREFIX
         value: uploads
+
+  - type: web
+    name: radiantai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://radiantai-backend.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
